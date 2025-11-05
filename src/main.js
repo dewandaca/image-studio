@@ -883,6 +883,9 @@ class PixelReader {
       .getElementById("statsSecondImageInput")
       .addEventListener("change", (e) => this.handleStatsSecondImageUpload(e));
     document
+      .getElementById("analyzeSecondImage")
+      .addEventListener("click", () => this.analyzeSecondImage());
+    document
       .getElementById("analyzeMatching")
       .addEventListener("click", () => this.analyzeMatching());
   }
@@ -2103,6 +2106,81 @@ class PixelReader {
     document.getElementById("stats1MaxGray").textContent = statsGray.max;
   }
 
+  analyzeSecondImage() {
+    if (!this.statsSecondImageData) {
+      alert("Upload gambar kedua terlebih dahulu!");
+      return;
+    }
+
+    // Buat temporary ImageProcessor untuk gambar kedua
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = this.statsSecondImage.width;
+    tempCanvas.height = this.statsSecondImage.height;
+    const tempCtx = tempCanvas.getContext("2d");
+    tempCtx.drawImage(this.statsSecondImage, 0, 0);
+    const tempProcessor = new ImageProcessor(tempCanvas);
+
+    const imageData = this.statsSecondImageData;
+
+    // Extract data untuk setiap channel
+    const dataR = tempProcessor.extractChannelData(imageData, "r");
+    const dataG = tempProcessor.extractChannelData(imageData, "g");
+    const dataB = tempProcessor.extractChannelData(imageData, "b");
+    const dataGray = tempProcessor.extractChannelData(imageData, "gray");
+
+    // Hitung statistik untuk setiap channel
+    const statsR = tempProcessor.calculateComprehensiveStats(dataR);
+    const statsG = tempProcessor.calculateComprehensiveStats(dataG);
+    const statsB = tempProcessor.calculateComprehensiveStats(dataB);
+    const statsGray = tempProcessor.calculateComprehensiveStats(dataGray);
+
+    // Tampilkan hasil di tabel
+    this.displaySecondImageStats(statsR, statsG, statsB, statsGray);
+
+    console.log("✅ Statistik gambar kedua berhasil dihitung!");
+  }
+
+  displaySecondImageStats(statsR, statsG, statsB, statsGray) {
+    const statsDiv = document.getElementById("secondImageStats");
+    statsDiv.classList.remove("hidden");
+
+    // Update table dengan nilai statistik
+    document.getElementById("stats2MeanR").textContent = statsR.mean;
+    document.getElementById("stats2MeanG").textContent = statsG.mean;
+    document.getElementById("stats2MeanB").textContent = statsB.mean;
+    document.getElementById("stats2MeanGray").textContent = statsGray.mean;
+
+    document.getElementById("stats2StdR").textContent = statsR.std;
+    document.getElementById("stats2StdG").textContent = statsG.std;
+    document.getElementById("stats2StdB").textContent = statsB.std;
+    document.getElementById("stats2StdGray").textContent = statsGray.std;
+
+    document.getElementById("stats2SkewR").textContent = statsR.skewness;
+    document.getElementById("stats2SkewG").textContent = statsG.skewness;
+    document.getElementById("stats2SkewB").textContent = statsB.skewness;
+    document.getElementById("stats2SkewGray").textContent = statsGray.skewness;
+
+    document.getElementById("stats2KurtR").textContent = statsR.kurtosis;
+    document.getElementById("stats2KurtG").textContent = statsG.kurtosis;
+    document.getElementById("stats2KurtB").textContent = statsB.kurtosis;
+    document.getElementById("stats2KurtGray").textContent = statsGray.kurtosis;
+
+    document.getElementById("stats2EntrR").textContent = statsR.entropy;
+    document.getElementById("stats2EntrG").textContent = statsG.entropy;
+    document.getElementById("stats2EntrB").textContent = statsB.entropy;
+    document.getElementById("stats2EntrGray").textContent = statsGray.entropy;
+
+    document.getElementById("stats2MinR").textContent = statsR.min;
+    document.getElementById("stats2MinG").textContent = statsG.min;
+    document.getElementById("stats2MinB").textContent = statsB.min;
+    document.getElementById("stats2MinGray").textContent = statsGray.min;
+
+    document.getElementById("stats2MaxR").textContent = statsR.max;
+    document.getElementById("stats2MaxG").textContent = statsG.max;
+    document.getElementById("stats2MaxB").textContent = statsB.max;
+    document.getElementById("stats2MaxGray").textContent = statsGray.max;
+  }
+
   handleStatsSecondImageUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -2141,7 +2219,8 @@ class PixelReader {
           }
         }
 
-        // Enable analyze button
+        // Enable analyze buttons
+        document.getElementById("analyzeSecondImage").disabled = false;
         document.getElementById("analyzeMatching").disabled = false;
 
         console.log(

@@ -929,9 +929,81 @@
                     >
                   </div>
                   <div class="control-group">
+                    <button class="action-button" id="analyzeSecondImage" disabled>
+                      📊 Hitung Statistik Gambar Kedua
+                    </button>
                     <button class="action-button" id="analyzeMatching" disabled>
                       🔗 Hitung Matching
                     </button>
+                  </div>
+                </div>
+
+                <!-- Matching Results -->
+                <div class="statistics-results hidden" id="secondImageStats">
+                  <div class="stats-card">
+                    <h4>📊 Hasil Statistik Gambar Kedua</h4>
+                    <table class="statistics-table">
+                      <thead>
+                        <tr>
+                          <th>Metrik Statistik</th>
+                          <th>Red Channel</th>
+                          <th>Green Channel</th>
+                          <th>Blue Channel</th>
+                          <th>Grayscale</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><strong>Mean</strong></td>
+                          <td id="stats2MeanR">-</td>
+                          <td id="stats2MeanG">-</td>
+                          <td id="stats2MeanB">-</td>
+                          <td id="stats2MeanGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Std Dev</strong></td>
+                          <td id="stats2StdR">-</td>
+                          <td id="stats2StdG">-</td>
+                          <td id="stats2StdB">-</td>
+                          <td id="stats2StdGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Skewness</strong></td>
+                          <td id="stats2SkewR">-</td>
+                          <td id="stats2SkewG">-</td>
+                          <td id="stats2SkewB">-</td>
+                          <td id="stats2SkewGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Kurtosis</strong></td>
+                          <td id="stats2KurtR">-</td>
+                          <td id="stats2KurtG">-</td>
+                          <td id="stats2KurtB">-</td>
+                          <td id="stats2KurtGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Entropy</strong></td>
+                          <td id="stats2EntrR">-</td>
+                          <td id="stats2EntrG">-</td>
+                          <td id="stats2EntrB">-</td>
+                          <td id="stats2EntrGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Min Value</strong></td>
+                          <td id="stats2MinR">-</td>
+                          <td id="stats2MinG">-</td>
+                          <td id="stats2MinB">-</td>
+                          <td id="stats2MinGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Max Value</strong></td>
+                          <td id="stats2MaxR">-</td>
+                          <td id="stats2MaxG">-</td>
+                          <td id="stats2MaxB">-</td>
+                          <td id="stats2MaxGray">-</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 
