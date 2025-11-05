@@ -342,6 +342,390 @@ class ImageProcessor {
   clamp(value) {
     return Math.max(0, Math.min(255, Math.round(value)));
   }
+
+  // Calculate histogram untuk satu channel
+  calculateHistogram(imageData, channel = "gray") {
+    const histogram = new Array(256).fill(0);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      let value;
+      if (channel === "gray") {
+        // Luminance formula
+        value = Math.round(
+          0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+        );
+      } else if (channel === "r") {
+        value = data[i];
+      } else if (channel === "g") {
+        value = data[i + 1];
+      } else if (channel === "b") {
+        value = data[i + 2];
+      }
+      histogram[value]++;
+    }
+
+    return histogram;
+  }
+
+  // Find two peaks in histogram untuk auto-threshold
+  findTwoPeaks(histogram) {
+    // Smooth histogram dengan moving average
+    const smoothed = [];
+    const windowSize = 5;
+    for (let i = 0; i < histogram.length; i++) {
+      let sum = 0;
+      let count = 0;
+      for (let j = -windowSize; j <= windowSize; j++) {
+        const idx = i + j;
+        if (idx >= 0 && idx < histogram.length) {
+          sum += histogram[idx];
+          count++;
+        }
+      }
+      smoothed[i] = sum / count;
+    }
+
+    // Find local maxima
+    const peaks = [];
+    for (let i = 1; i < smoothed.length - 1; i++) {
+      if (smoothed[i] > smoothed[i - 1] && smoothed[i] > smoothed[i + 1]) {
+        peaks.push({ value: i, height: smoothed[i] });
+      }
+    }
+
+    // Sort by height dan ambil 2 tertinggi
+    peaks.sort((a, b) => b.height - a.height);
+
+    if (peaks.length >= 2) {
+      // Return 2 peaks dengan value terurut (yang kecil dulu)
+      const peak1 = peaks[0].value;
+      const peak2 = peaks[1].value;
+      return peak1 < peak2 ? [peak1, peak2] : [peak2, peak1];
+    } else if (peaks.length === 1) {
+      // Jika hanya 1 peak, gunakan median sebagai peak kedua
+      return [peaks[0].value, 128];
+    } else {
+      // Fallback ke default
+      return [64, 192];
+    }
+  }
+
+  // Histogram Equalization
+  histogramEqualization() {
+    const imageData = this.getImageData();
+    const data = imageData.data;
+    const totalPixels = imageData.width * imageData.height;
+
+    // Calculate histogram untuk grayscale
+    const histogram = this.calculateHistogram(imageData, "gray");
+
+    // Calculate CDF (Cumulative Distribution Function)
+    const cdf = new Array(256);
+    cdf[0] = histogram[0];
+    for (let i = 1; i < 256; i++) {
+      cdf[i] = cdf[i - 1] + histogram[i];
+    }
+
+    // Normalize CDF
+    const cdfMin = cdf.find((val) => val > 0);
+    const lookupTable = new Array(256);
+    for (let i = 0; i < 256; i++) {
+      lookupTable[i] = Math.round(
+        ((cdf[i] - cdfMin) / (totalPixels - cdfMin)) * 255
+      );
+    }
+
+    // Apply equalization
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = Math.round(
+        0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+      );
+      const newValue = lookupTable[gray];
+      data[i] = newValue; // R
+      data[i + 1] = newValue; // G
+      data[i + 2] = newValue; // B
+    }
+
+    return imageData;
+  }
+
+  // Calculate statistics (mean & standard deviation)
+  calculateStats(imageData) {
+    const data = imageData.data;
+    let sum = 0;
+    let count = 0;
+
+    // Calculate mean
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = Math.round(
+        0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+      );
+      sum += gray;
+      count++;
+    }
+    const mean = sum / count;
+
+    // Calculate standard deviation
+    let varianceSum = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = Math.round(
+        0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+      );
+      varianceSum += Math.pow(gray - mean, 2);
+    }
+    const std = Math.sqrt(varianceSum / count);
+
+    return { mean: mean.toFixed(2), std: std.toFixed(2) };
+  }
+
+  // Extract channel data from ImageData
+  extractChannelData(imageData, channel = "gray") {
+    const data = imageData.data;
+    const values = [];
+
+    for (let i = 0; i < data.length; i += 4) {
+      let value;
+      if (channel === "gray") {
+        value = Math.round(
+          0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+        );
+      } else if (channel === "r") {
+        value = data[i];
+      } else if (channel === "g") {
+        value = data[i + 1];
+      } else if (channel === "b") {
+        value = data[i + 2];
+      }
+      values.push(value);
+    }
+
+    return values;
+  }
+
+  // Calculate comprehensive statistics untuk satu channel
+  calculateComprehensiveStats(values) {
+    if (!values || values.length === 0) {
+      return {};
+    }
+
+    const n = values.length;
+
+    // Mean
+    const mean = values.reduce((a, b) => a + b) / n;
+
+    // Min & Max
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+
+    // Standard Deviation
+    const variance =
+      values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
+    const std = Math.sqrt(variance);
+
+    // Skewness (moment ketiga / std^3)
+    const skewness =
+      std > 0
+        ? values.reduce((sum, val) => sum + Math.pow(val - mean, 3), 0) /
+          (n * Math.pow(std, 3))
+        : 0;
+
+    // Kurtosis (moment keempat / std^4 - 3)
+    const kurtosis =
+      std > 0
+        ? values.reduce((sum, val) => sum + Math.pow(val - mean, 4), 0) /
+            (n * Math.pow(std, 4)) -
+          3
+        : 0;
+
+    // Entropy
+    const histogram = new Array(256).fill(0);
+    for (let val of values) {
+      histogram[Math.round(val)]++;
+    }
+
+    let entropy = 0;
+    for (let count of histogram) {
+      if (count > 0) {
+        const probability = count / n;
+        entropy -= probability * Math.log2(probability);
+      }
+    }
+
+    return {
+      mean: mean.toFixed(2),
+      std: std.toFixed(2),
+      skewness: skewness.toFixed(4),
+      kurtosis: kurtosis.toFixed(4),
+      entropy: entropy.toFixed(4),
+      min: min,
+      max: max,
+    };
+  }
+
+  // Calculate Pearson Correlation antara dua array
+  pearsonCorrelation(data1, data2) {
+    if (data1.length !== data2.length) {
+      return null;
+    }
+
+    const n = data1.length;
+    const mean1 = data1.reduce((a, b) => a + b, 0) / n;
+    const mean2 = data2.reduce((a, b) => a + b, 0) / n;
+
+    let numerator = 0;
+    let sum1 = 0;
+    let sum2 = 0;
+
+    for (let i = 0; i < n; i++) {
+      const d1 = data1[i] - mean1;
+      const d2 = data2[i] - mean2;
+      numerator += d1 * d2;
+      sum1 += d1 * d1;
+      sum2 += d2 * d2;
+    }
+
+    const denominator = Math.sqrt(sum1 * sum2);
+
+    if (denominator === 0) {
+      return 0;
+    }
+
+    return numerator / denominator;
+  }
+
+  // Calculate Chi-Square distance antara dua histogram
+  chiSquareDistance(hist1, hist2) {
+    if (hist1.length !== hist2.length) {
+      return null;
+    }
+
+    let chiSquare = 0;
+
+    for (let i = 0; i < hist1.length; i++) {
+      const denom = hist1[i] + hist2[i];
+      if (denom !== 0) {
+        const diff = hist1[i] - hist2[i];
+        chiSquare += (diff * diff) / denom;
+      }
+    }
+
+    return (chiSquare / 2).toFixed(4);
+  }
+
+  // Calculate Euclidean Distance antara dua array
+  euclideanDistance(data1, data2) {
+    if (data1.length !== data2.length) {
+      return null;
+    }
+
+    let sumSquares = 0;
+    for (let i = 0; i < data1.length; i++) {
+      const diff = data1[i] - data2[i];
+      sumSquares += diff * diff;
+    }
+
+    return Math.sqrt(sumSquares).toFixed(2);
+  }
+
+  // Calculate Manhattan Distance antara dua array
+  manhattanDistance(data1, data2) {
+    if (data1.length !== data2.length) {
+      return null;
+    }
+
+    let sum = 0;
+    for (let i = 0; i < data1.length; i++) {
+      sum += Math.abs(data1[i] - data2[i]);
+    }
+
+    return sum.toFixed(2);
+  }
+
+  // Calculate Structural Similarity Index (SSIM)
+  // Simplified version untuk imaginary data
+  structuralSimilarity(imageData1, imageData2) {
+    // Resize imageData2 ke ukuran imageData1 jika perlu
+    let resizedData2 = imageData2;
+    if (
+      imageData1.width !== imageData2.width ||
+      imageData1.height !== imageData2.height
+    ) {
+      resizedData2 = this.resizeImageDataForComparison(
+        imageData2,
+        imageData1.width,
+        imageData1.height
+      );
+    }
+
+    const data1 = imageData1.data;
+    const data2 = resizedData2.data;
+    const n = Math.min(data1.length, data2.length);
+
+    const c1 = 6.5025;
+    const c2 = 58.5225;
+    let ssimSum = 0;
+    const windowSize = 11;
+
+    // Calculate SSIM untuk luminance (grayscale)
+    for (let i = 0; i < n - windowSize * 4; i += windowSize * 4) {
+      const window1 = [];
+      const window2 = [];
+
+      for (let j = 0; j < windowSize && i + j * 4 < n; j++) {
+        const idx = i + j * 4;
+        window1.push(
+          0.299 * data1[idx] + 0.587 * data1[idx + 1] + 0.114 * data1[idx + 2]
+        );
+        window2.push(
+          0.299 * data2[idx] + 0.587 * data2[idx + 1] + 0.114 * data2[idx + 2]
+        );
+      }
+
+      const mean1 = window1.reduce((a, b) => a + b) / window1.length;
+      const mean2 = window2.reduce((a, b) => a + b) / window2.length;
+
+      let var1 = 0;
+      let var2 = 0;
+      let covar = 0;
+
+      for (let j = 0; j < window1.length; j++) {
+        var1 += Math.pow(window1[j] - mean1, 2);
+        var2 += Math.pow(window2[j] - mean2, 2);
+        covar += (window1[j] - mean1) * (window2[j] - mean2);
+      }
+
+      var1 /= window1.length;
+      var2 /= window2.length;
+      covar /= window1.length;
+
+      const numerator = (2 * mean1 * mean2 + c1) * (2 * covar + c2);
+      const denominator =
+        (mean1 * mean1 + mean2 * mean2 + c1) * (var1 + var2 + c2);
+
+      ssimSum += numerator / denominator;
+    }
+
+    const windowCount = Math.floor((n - windowSize * 4) / (windowSize * 4));
+    return windowCount > 0 ? (ssimSum / windowCount).toFixed(4) : "0.0000";
+  }
+
+  // Helper untuk resize ImageData untuk comparison
+  resizeImageDataForComparison(imageData, targetWidth, targetHeight) {
+    const srcCanvas = document.createElement("canvas");
+    srcCanvas.width = imageData.width;
+    srcCanvas.height = imageData.height;
+    const srcCtx = srcCanvas.getContext("2d");
+    srcCtx.putImageData(imageData, 0, 0);
+
+    const dstCanvas = document.createElement("canvas");
+    dstCanvas.width = targetWidth;
+    dstCanvas.height = targetHeight;
+    const dstCtx = dstCanvas.getContext("2d");
+    dstCtx.drawImage(srcCanvas, 0, 0, targetWidth, targetHeight);
+
+    return dstCtx.getImageData(0, 0, targetWidth, targetHeight);
+  }
 }
 
 class PixelReader {
@@ -356,6 +740,11 @@ class PixelReader {
     this.imageSize = document.getElementById("imageSize");
     this.tabSection = document.getElementById("tabSection");
 
+    this.pixelX = document.getElementById("pixelX");
+    this.pixelY = document.getElementById("pixelY");
+    this.searchButton = document.getElementById("searchPixel");
+    this.searchResult = document.getElementById("searchResult");
+
     this.currentImage = null;
     this.pixelDataArray = [];
 
@@ -365,6 +754,10 @@ class PixelReader {
     // Storage untuk second images (arithmetic & boolean operations)
     this.secondImage = null;
     this.booleanSecondImage = null;
+
+    // Storage untuk statistics second image
+    this.statsSecondImage = null;
+    this.statsSecondImageData = null;
 
     this.init();
   }
@@ -457,11 +850,68 @@ class PixelReader {
         this.handleTabChange(e.target.dataset.tab)
       );
     });
+
+    this.searchButton.addEventListener("click", () => this.searchPixelAt());
+
+    // Setup search for all matrix tabs
+    this.setupPixelSearch("Grayscale", "processCanvasGrayscale");
+    this.setupPixelSearch("Binary", "processCanvasBinary");
+    this.setupPixelSearch("Brightness", "processCanvas2");
+    this.setupPixelSearch("Arithmetic", "processCanvas3");
+    this.setupPixelSearch("Boolean", "processCanvas4");
+    this.setupPixelSearch("Geometry", "processCanvas5");
+
+    // Histogram controls
+    document
+      .getElementById("generateHistogram")
+      .addEventListener("click", () => this.generateHistogram());
+    document
+      .getElementById("autoThresholdBinary")
+      .addEventListener("click", () => this.applyAutoThresholdBinary());
+    document
+      .getElementById("applyEqualization")
+      .addEventListener("click", () => this.applyHistogramEqualization());
+    document
+      .getElementById("resetEqualization")
+      .addEventListener("click", () => this.resetEqualization());
+
+    // Statistics controls
+    document
+      .getElementById("analyzeFirstImage")
+      .addEventListener("click", () => this.analyzeFirstImage());
+    document
+      .getElementById("statsSecondImageInput")
+      .addEventListener("change", (e) => this.handleStatsSecondImageUpload(e));
+    document
+      .getElementById("analyzeMatching")
+      .addEventListener("click", () => this.analyzeMatching());
+  }
+
+  setupPixelSearch(tabId, canvasId) {
+    const searchButton = document.getElementById(`searchPixel${tabId}`);
+    const pixelXInput = document.getElementById(`pixelX${tabId}`);
+    const pixelYInput = document.getElementById(`pixelY${tabId}`);
+    const searchResultDiv = document.getElementById(`searchResult${tabId}`);
+    const canvas = document.getElementById(canvasId);
+
+    searchButton.addEventListener("click", () =>
+      this.searchPixelOnCanvas(
+        canvas,
+        pixelXInput,
+        pixelYInput,
+        searchResultDiv
+      )
+    );
   }
 
   handleImageUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
+
+    // Visual feedback untuk upload
+    const uploadButton = document.querySelector(".upload-button");
+    uploadButton.textContent = "⏳ Memproses...";
+    uploadButton.style.pointerEvents = "none";
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -472,11 +922,33 @@ class PixelReader {
         this.readPixels();
         this.processor = new ImageProcessor(this.canvas);
 
-        // Show tab section
+        // Show tab section dengan animasi
         this.tabSection.classList.remove("hidden");
+
+        // Success feedback
+        uploadButton.textContent = "✅ Gambar Berhasil Di-upload!";
+        uploadButton.classList.add("success-uploaded");
+
+        setTimeout(() => {
+          uploadButton.textContent = "📤 Upload Gambar Lain";
+          uploadButton.classList.remove("success-uploaded");
+          uploadButton.style.pointerEvents = "auto";
+        }, 2000);
+
+        // Hide welcome guide setelah upload
+        const welcomeGuide = document.getElementById("welcomeGuide");
+        if (welcomeGuide) {
+          setTimeout(() => {
+            welcomeGuide.style.opacity = "0";
+            welcomeGuide.style.transition = "opacity 0.5s ease";
+            setTimeout(() => welcomeGuide.classList.add("hidden"), 500);
+          }, 1000);
+        }
 
         // Reset all process canvases
         this.resetAllCanvases();
+
+        console.log(`✅ Image loaded: ${img.width}x${img.height} pixels`);
       };
       img.src = e.target.result;
     };
@@ -1084,6 +1556,796 @@ class PixelReader {
     this.booleanSecondImage = null;
     this.secondImage = null;
   }
+
+  searchPixelAt() {
+    const x = parseInt(this.pixelX.value);
+    const y = parseInt(this.pixelY.value);
+
+    if (isNaN(x) || isNaN(y)) {
+      alert("Masukkan koordinat X dan Y yang valid");
+      return;
+    }
+
+    if (x < 0 || x >= this.canvas.width || y < 0 || y >= this.canvas.height) {
+      alert("Koordinat di luar batas gambar");
+      return;
+    }
+
+    const pixelData = this.pixelDataArray.find((p) => p.x === x && p.y === y);
+
+    if (pixelData) {
+      this.searchResult.style.display = "block";
+      this.searchResult.innerHTML = `
+        <strong>Pixel pada (${x}, ${y}):</strong><br>
+        R: ${pixelData.r}<br>
+        G: ${pixelData.g}<br>
+        B: ${pixelData.b}<br>
+      `;
+    }
+  }
+
+  searchPixelOnCanvas(canvas, xInput, yInput, resultDiv) {
+    const x = parseInt(xInput.value);
+    const y = parseInt(yInput.value);
+
+    if (isNaN(x) || isNaN(y)) {
+      alert("Masukkan koordinat X dan Y yang valid");
+      return;
+    }
+
+    if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) {
+      alert("Koordinat di luar batas gambar");
+      return;
+    }
+
+    const ctx = canvas.getContext("2d");
+    const pixelData = ctx.getImageData(x, y, 1, 1).data;
+    const r = pixelData[0];
+    const g = pixelData[1];
+    const b = pixelData[2];
+
+    if (resultDiv) {
+      resultDiv.style.display = "block";
+      resultDiv.innerHTML = `
+        <strong>Pixel pada (${x}, ${y}):</strong><br>
+        R: ${r}<br>
+        G: ${g}<br>
+        B: ${b}<br>
+        <div class="color-box" style="width: 50px; height: 20px; background-color: rgb(${r}, ${g}, ${b}); border: 1px solid #fff; margin-top: 5px;"></div>
+      `;
+    } else {
+      alert(`Pixel at (${x}, ${y}): R=${r}, G=${g}, B=${b}`);
+    }
+  }
+
+  // === Histogram Processing Features ===
+  generateHistogram() {
+    if (!this.processor) {
+      alert("Upload gambar terlebih dahulu!");
+      return;
+    }
+
+    const imageData = this.processor.getImageData();
+
+    // Calculate histograms untuk setiap channel
+    const histR = this.processor.calculateHistogram(imageData, "r");
+    const histG = this.processor.calculateHistogram(imageData, "g");
+    const histB = this.processor.calculateHistogram(imageData, "b");
+    const histGray = this.processor.calculateHistogram(imageData, "gray");
+
+    // Draw histogram charts
+    this.drawHistogramChart("histogramRed", histR, "#ef4444");
+    this.drawHistogramChart("histogramGreen", histG, "#22c55e");
+    this.drawHistogramChart("histogramBlue", histB, "#3b82f6");
+    this.drawHistogramChart("histogramGray", histGray, "#94a3b8");
+
+    // Draw histogram gabungan RGB
+    this.drawCombinedHistogram("histogramCombined", histR, histG, histB);
+
+    // Display histogram data table
+    this.displayHistogramTable(histR, histG, histB, histGray);
+
+    console.log("✅ Histogram berhasil di-generate!");
+  }
+
+  drawHistogramChart(canvasId, histogram, color) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext("2d");
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // Margin untuk sumbu - diperbesar untuk angka yang lebih panjang
+    const marginLeft = 60;
+    const marginBottom = 40;
+    const marginTop = 10;
+    const marginRight = 20;
+    const chartWidth = width - marginLeft - marginRight;
+    const chartHeight = height - marginBottom - marginTop;
+
+    // Clear canvas
+    ctx.fillStyle = "#1e293b";
+    ctx.fillRect(0, 0, width, height);
+
+    // Find max value untuk normalisasi
+    const maxValue = Math.max(...histogram);
+
+    // Draw Y-axis (frekuensi)
+    ctx.strokeStyle = "#64748b";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(marginLeft, marginTop);
+    ctx.lineTo(marginLeft, height - marginBottom);
+    ctx.stroke();
+
+    // Draw X-axis (nilai intensitas)
+    ctx.beginPath();
+    ctx.moveTo(marginLeft, height - marginBottom);
+    ctx.lineTo(width - marginRight, height - marginBottom);
+    ctx.stroke();
+
+    // Draw Y-axis labels (frekuensi)
+    ctx.fillStyle = "#cbd5e1";
+    ctx.font = "11px monospace";
+    ctx.textAlign = "right";
+    const numYTicks = 5;
+    for (let i = 0; i <= numYTicks; i++) {
+      const value = Math.round((maxValue / numYTicks) * (numYTicks - i));
+      const y = marginTop + (chartHeight / numYTicks) * i;
+      ctx.fillText(value.toString(), marginLeft - 5, y + 4);
+
+      // Draw grid line
+      ctx.strokeStyle = "#374151";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(marginLeft, y);
+      ctx.lineTo(width - marginRight, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Draw X-axis labels (nilai intensitas 0-255)
+    ctx.textAlign = "center";
+    const xLabels = [0, 64, 128, 192, 255];
+    for (let label of xLabels) {
+      const x = marginLeft + (label / 255) * chartWidth;
+      ctx.fillText(label.toString(), x, height - marginBottom + 18);
+
+      // Draw tick mark
+      ctx.strokeStyle = "#64748b";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, height - marginBottom);
+      ctx.lineTo(x, height - marginBottom + 5);
+      ctx.stroke();
+    }
+
+    // Draw bars
+    ctx.fillStyle = color;
+    for (let i = 0; i < 256; i++) {
+      const barHeight = (histogram[i] / maxValue) * chartHeight;
+      const x = marginLeft + (i / 255) * chartWidth;
+      const y = height - marginBottom - barHeight;
+      const barWidth = chartWidth / 256;
+      ctx.fillRect(x, y, barWidth, barHeight);
+    }
+
+    // Draw axis titles
+    ctx.fillStyle = "#e2e8f0";
+    ctx.font = "bold 12px monospace";
+    ctx.textAlign = "center";
+
+    // X-axis title
+    ctx.fillText(
+      "Nilai Intensitas (0-255)",
+      marginLeft + chartWidth / 2,
+      height - 5
+    );
+
+    // Y-axis title (rotated)
+    ctx.save();
+    ctx.translate(15, marginTop + chartHeight / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("Frekuensi", 0, 0);
+    ctx.restore();
+  }
+
+  drawCombinedHistogram(canvasId, histR, histG, histB) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext("2d");
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // Margin untuk sumbu - sama dengan single histogram
+    const marginLeft = 60;
+    const marginBottom = 40;
+    const marginTop = 10;
+    const marginRight = 20;
+    const chartWidth = width - marginLeft - marginRight;
+    const chartHeight = height - marginBottom - marginTop;
+
+    // Clear canvas
+    ctx.fillStyle = "#1e293b";
+    ctx.fillRect(0, 0, width, height);
+
+    // Find max value dari semua channel untuk normalisasi
+    const maxR = Math.max(...histR);
+    const maxG = Math.max(...histG);
+    const maxB = Math.max(...histB);
+    const maxValue = Math.max(maxR, maxG, maxB);
+
+    // Draw Y-axis (frekuensi)
+    ctx.strokeStyle = "#64748b";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(marginLeft, marginTop);
+    ctx.lineTo(marginLeft, height - marginBottom);
+    ctx.stroke();
+
+    // Draw X-axis (nilai intensitas)
+    ctx.beginPath();
+    ctx.moveTo(marginLeft, height - marginBottom);
+    ctx.lineTo(width - marginRight, height - marginBottom);
+    ctx.stroke();
+
+    // Draw Y-axis labels (frekuensi)
+    ctx.fillStyle = "#cbd5e1";
+    ctx.font = "11px monospace";
+    ctx.textAlign = "right";
+    const numYTicks = 5;
+    for (let i = 0; i <= numYTicks; i++) {
+      const value = Math.round((maxValue / numYTicks) * (numYTicks - i));
+      const y = marginTop + (chartHeight / numYTicks) * i;
+      ctx.fillText(value.toString(), marginLeft - 5, y + 4);
+
+      // Draw grid line
+      ctx.strokeStyle = "#374151";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(marginLeft, y);
+      ctx.lineTo(width - marginRight, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Draw X-axis labels (nilai intensitas 0-255)
+    ctx.textAlign = "center";
+    const xLabels = [0, 64, 128, 192, 255];
+    for (let label of xLabels) {
+      const x = marginLeft + (label / 255) * chartWidth;
+      ctx.fillText(label.toString(), x, height - marginBottom + 18);
+
+      // Draw tick mark
+      ctx.strokeStyle = "#64748b";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, height - marginBottom);
+      ctx.lineTo(x, height - marginBottom + 5);
+      ctx.stroke();
+    }
+
+    // Draw bars untuk semua channel dengan transparansi
+    const barWidth = chartWidth / 256;
+
+    // Draw Red channel dengan opacity
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = "#ef4444";
+    for (let i = 0; i < 256; i++) {
+      const barHeight = (histR[i] / maxValue) * chartHeight;
+      const x = marginLeft + (i / 255) * chartWidth;
+      const y = height - marginBottom - barHeight;
+      ctx.fillRect(x, y, barWidth, barHeight);
+    }
+
+    // Draw Green channel dengan opacity
+    ctx.fillStyle = "#22c55e";
+    for (let i = 0; i < 256; i++) {
+      const barHeight = (histG[i] / maxValue) * chartHeight;
+      const x = marginLeft + (i / 255) * chartWidth;
+      const y = height - marginBottom - barHeight;
+      ctx.fillRect(x, y, barWidth, barHeight);
+    }
+
+    // Draw Blue channel dengan opacity
+    ctx.fillStyle = "#3b82f6";
+    for (let i = 0; i < 256; i++) {
+      const barHeight = (histB[i] / maxValue) * chartHeight;
+      const x = marginLeft + (i / 255) * chartWidth;
+      const y = height - marginBottom - barHeight;
+      ctx.fillRect(x, y, barWidth, barHeight);
+    }
+
+    // Reset opacity
+    ctx.globalAlpha = 1.0;
+
+    // Draw axis titles
+    ctx.fillStyle = "#e2e8f0";
+    ctx.font = "bold 12px monospace";
+    ctx.textAlign = "center";
+
+    // X-axis title
+    ctx.fillText(
+      "Nilai Intensitas (0-255)",
+      marginLeft + chartWidth / 2,
+      height - 5
+    );
+
+    // Y-axis title (rotated)
+    ctx.save();
+    ctx.translate(15, marginTop + chartHeight / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("Frekuensi", 0, 0);
+    ctx.restore();
+
+    // Draw legend untuk combined histogram
+    const legendX = width - marginRight - 100;
+    const legendY = marginTop + 20;
+    const legendSize = 15;
+    const legendSpacing = 25;
+
+    // Red legend
+    ctx.fillStyle = "#ef4444";
+    ctx.fillRect(legendX, legendY, legendSize, legendSize);
+    ctx.fillStyle = "#e2e8f0";
+    ctx.font = "12px monospace";
+    ctx.textAlign = "left";
+    ctx.fillText("Red", legendX + legendSize + 5, legendY + 12);
+
+    // Green legend
+    ctx.fillStyle = "#22c55e";
+    ctx.fillRect(legendX, legendY + legendSpacing, legendSize, legendSize);
+    ctx.fillStyle = "#e2e8f0";
+    ctx.fillText(
+      "Green",
+      legendX + legendSize + 5,
+      legendY + legendSpacing + 12
+    );
+
+    // Blue legend
+    ctx.fillStyle = "#3b82f6";
+    ctx.fillRect(legendX, legendY + legendSpacing * 2, legendSize, legendSize);
+    ctx.fillStyle = "#e2e8f0";
+    ctx.fillText(
+      "Blue",
+      legendX + legendSize + 5,
+      legendY + legendSpacing * 2 + 12
+    );
+  }
+
+  displayHistogramTable(histR, histG, histB, histGray) {
+    const tableDiv = document.getElementById("histogramTable");
+
+    // Display hanya setiap 5 nilai untuk menghemat space
+    let html = '<table class="histogram-data-table">';
+    html +=
+      "<thead><tr><th>Value</th><th>Red</th><th>Green</th><th>Blue</th><th>Gray</th></tr></thead>";
+    html += "<tbody>";
+
+    for (let i = 0; i < 256; i += 5) {
+      html += `<tr>
+        <td>${i}</td>
+        <td>${histR[i]}</td>
+        <td>${histG[i]}</td>
+        <td>${histB[i]}</td>
+        <td>${histGray[i]}</td>
+      </tr>`;
+    }
+
+    html += "</tbody></table>";
+    tableDiv.innerHTML = html;
+  }
+
+  applyAutoThresholdBinary() {
+    if (!this.processor) {
+      alert("Upload gambar terlebih dahulu!");
+      return;
+    }
+
+    const imageData = this.processor.getImageData();
+    const histGray = this.processor.calculateHistogram(imageData, "gray");
+
+    // Find two peaks
+    const peaks = this.processor.findTwoPeaks(histGray);
+    const threshold = Math.round((peaks[0] + peaks[1]) / 2);
+
+    // Display threshold info
+    document.getElementById("thresholdInfo").classList.remove("hidden");
+    document.getElementById("autoThresholdValue").textContent = threshold;
+    document.getElementById("peak1Value").textContent = peaks[0];
+    document.getElementById("peak2Value").textContent = peaks[1];
+
+    // Apply binary dengan threshold otomatis
+    const binaryData = this.processor.toBinary(threshold);
+    const canvas = document.getElementById("histogramBinaryCanvas");
+    this.processor.drawToCanvas(binaryData, canvas);
+
+    console.log(
+      `✅ Auto-threshold binary applied with threshold=${threshold} (peaks: ${peaks[0]}, ${peaks[1]})`
+    );
+  }
+
+  applyHistogramEqualization() {
+    if (!this.processor) {
+      alert("Upload gambar terlebih dahulu!");
+      return;
+    }
+
+    // Get original image stats
+    const originalData = this.processor.getImageData();
+    const statsBefore = this.processor.calculateStats(originalData);
+
+    // Display before stats
+    document.getElementById("meanBefore").textContent = statsBefore.mean;
+    document.getElementById("stdBefore").textContent = statsBefore.std;
+
+    // Draw original to before canvas
+    const beforeCanvas = document.getElementById("equalizationBefore");
+    beforeCanvas.width = this.currentImage.width;
+    beforeCanvas.height = this.currentImage.height;
+    const beforeCtx = beforeCanvas.getContext("2d");
+    beforeCtx.drawImage(this.currentImage, 0, 0);
+
+    // Calculate histogram before
+    const histBefore = this.processor.calculateHistogram(originalData, "gray");
+
+    // Apply equalization
+    const equalizedData = this.processor.histogramEqualization();
+    const afterCanvas = document.getElementById("equalizationAfter");
+    this.processor.drawToCanvas(equalizedData, afterCanvas);
+
+    // Get stats after equalization
+    const statsAfter = this.processor.calculateStats(equalizedData);
+    document.getElementById("meanAfter").textContent = statsAfter.mean;
+    document.getElementById("stdAfter").textContent = statsAfter.std;
+
+    // Calculate histogram after
+    const histAfter = this.processor.calculateHistogram(equalizedData, "gray");
+
+    // Draw comparison histograms
+    this.drawHistogramChart("histogramBeforeEq", histBefore, "#94a3b8");
+    this.drawHistogramChart("histogramAfterEq", histAfter, "#3b82f6");
+
+    console.log("✅ Histogram equalization applied!");
+    console.log(
+      `📊 Stats: Mean ${statsBefore.mean} → ${statsAfter.mean}, Std ${statsBefore.std} → ${statsAfter.std}`
+    );
+  }
+
+  resetEqualization() {
+    if (!this.currentImage) return;
+
+    // Reset after canvas to original
+    const afterCanvas = document.getElementById("equalizationAfter");
+    afterCanvas.width = this.currentImage.width;
+    afterCanvas.height = this.currentImage.height;
+    const ctx = afterCanvas.getContext("2d");
+    ctx.drawImage(this.currentImage, 0, 0);
+
+    // Clear stats
+    document.getElementById("meanAfter").textContent = "-";
+    document.getElementById("stdAfter").textContent = "-";
+
+    // Clear after histogram
+    const histCanvas = document.getElementById("histogramAfterEq");
+    const histCtx = histCanvas.getContext("2d");
+    histCtx.fillStyle = "#1e293b";
+    histCtx.fillRect(0, 0, histCanvas.width, histCanvas.height);
+
+    console.log("🔄 Equalization reset");
+  }
+
+  // === Statistics Features ===
+  analyzeFirstImage() {
+    if (!this.processor) {
+      alert("Upload gambar terlebih dahulu!");
+      return;
+    }
+
+    const imageData = this.processor.getImageData();
+
+    // Extract data untuk setiap channel
+    const dataR = this.processor.extractChannelData(imageData, "r");
+    const dataG = this.processor.extractChannelData(imageData, "g");
+    const dataB = this.processor.extractChannelData(imageData, "b");
+    const dataGray = this.processor.extractChannelData(imageData, "gray");
+
+    // Hitung statistik untuk setiap channel
+    const statsR = this.processor.calculateComprehensiveStats(dataR);
+    const statsG = this.processor.calculateComprehensiveStats(dataG);
+    const statsB = this.processor.calculateComprehensiveStats(dataB);
+    const statsGray = this.processor.calculateComprehensiveStats(dataGray);
+
+    // Tampilkan hasil di tabel
+    this.displayFirstImageStats(statsR, statsG, statsB, statsGray);
+
+    console.log("✅ Statistik gambar pertama berhasil dihitung!");
+  }
+
+  displayFirstImageStats(statsR, statsG, statsB, statsGray) {
+    const statsDiv = document.getElementById("firstImageStats");
+    statsDiv.classList.remove("hidden");
+
+    // Update table dengan nilai statistik
+    document.getElementById("stats1MeanR").textContent = statsR.mean;
+    document.getElementById("stats1MeanG").textContent = statsG.mean;
+    document.getElementById("stats1MeanB").textContent = statsB.mean;
+    document.getElementById("stats1MeanGray").textContent = statsGray.mean;
+
+    document.getElementById("stats1StdR").textContent = statsR.std;
+    document.getElementById("stats1StdG").textContent = statsG.std;
+    document.getElementById("stats1StdB").textContent = statsB.std;
+    document.getElementById("stats1StdGray").textContent = statsGray.std;
+
+    document.getElementById("stats1SkewR").textContent = statsR.skewness;
+    document.getElementById("stats1SkewG").textContent = statsG.skewness;
+    document.getElementById("stats1SkewB").textContent = statsB.skewness;
+    document.getElementById("stats1SkewGray").textContent = statsGray.skewness;
+
+    document.getElementById("stats1KurtR").textContent = statsR.kurtosis;
+    document.getElementById("stats1KurtG").textContent = statsG.kurtosis;
+    document.getElementById("stats1KurtB").textContent = statsB.kurtosis;
+    document.getElementById("stats1KurtGray").textContent = statsGray.kurtosis;
+
+    document.getElementById("stats1EntrR").textContent = statsR.entropy;
+    document.getElementById("stats1EntrG").textContent = statsG.entropy;
+    document.getElementById("stats1EntrB").textContent = statsB.entropy;
+    document.getElementById("stats1EntrGray").textContent = statsGray.entropy;
+
+    document.getElementById("stats1MinR").textContent = statsR.min;
+    document.getElementById("stats1MinG").textContent = statsG.min;
+    document.getElementById("stats1MinB").textContent = statsB.min;
+    document.getElementById("stats1MinGray").textContent = statsGray.min;
+
+    document.getElementById("stats1MaxR").textContent = statsR.max;
+    document.getElementById("stats1MaxG").textContent = statsG.max;
+    document.getElementById("stats1MaxB").textContent = statsB.max;
+    document.getElementById("stats1MaxGray").textContent = statsGray.max;
+  }
+
+  handleStatsSecondImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const statusText = document.getElementById("statsImage2Status");
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        this.statsSecondImage = img;
+        this.statsSecondImageData = ctx.getImageData(
+          0,
+          0,
+          img.width,
+          img.height
+        );
+
+        // Update status
+        if (statusText) {
+          if (
+            this.currentImage &&
+            (img.width !== this.currentImage.width ||
+              img.height !== this.currentImage.height)
+          ) {
+            statusText.textContent = `✅ ${img.width}x${img.height} (akan di-resize)`;
+            statusText.className = "status-text warning";
+          } else {
+            statusText.textContent = `✅ ${img.width}x${img.height}`;
+            statusText.className = "status-text success";
+          }
+        }
+
+        // Enable analyze button
+        document.getElementById("analyzeMatching").disabled = false;
+
+        console.log(
+          `✅ Gambar kedua untuk Statistics berhasil di-upload: ${img.width}x${img.height}`
+        );
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  analyzeMatching() {
+    if (!this.processor) {
+      alert("Upload gambar pertama terlebih dahulu!");
+      return;
+    }
+
+    if (!this.statsSecondImageData) {
+      alert("Upload gambar kedua terlebih dahulu!");
+      return;
+    }
+
+    // Get image data dari kedua gambar
+    const imageData1 = this.processor.getImageData();
+    let imageData2 = this.statsSecondImageData;
+
+    // Resize imageData2 jika ukuran berbeda
+    if (
+      imageData1.width !== imageData2.width ||
+      imageData1.height !== imageData2.height
+    ) {
+      imageData2 = this.processor.resizeImageDataForComparison(
+        imageData2,
+        imageData1.width,
+        imageData1.height
+      );
+    }
+
+    // Extract channel data
+    const data1R = this.processor.extractChannelData(imageData1, "r");
+    const data1G = this.processor.extractChannelData(imageData1, "g");
+    const data1B = this.processor.extractChannelData(imageData1, "b");
+    const data1Gray = this.processor.extractChannelData(imageData1, "gray");
+
+    const data2R = this.processor.extractChannelData(imageData2, "r");
+    const data2G = this.processor.extractChannelData(imageData2, "g");
+    const data2B = this.processor.extractChannelData(imageData2, "b");
+    const data2Gray = this.processor.extractChannelData(imageData2, "gray");
+
+    // Calculate Pearson Correlation
+    const pearsonR = this.processor.pearsonCorrelation(data1R, data2R);
+    const pearsonG = this.processor.pearsonCorrelation(data1G, data2G);
+    const pearsonB = this.processor.pearsonCorrelation(data1B, data2B);
+    const pearsonGray = this.processor.pearsonCorrelation(data1Gray, data2Gray);
+
+    // Calculate Chi-Square distance (perlu histogram)
+    const hist1R = this.processor.calculateHistogram(imageData1, "r");
+    const hist1G = this.processor.calculateHistogram(imageData1, "g");
+    const hist1B = this.processor.calculateHistogram(imageData1, "b");
+    const hist1Gray = this.processor.calculateHistogram(imageData1, "gray");
+
+    const hist2R = this.processor.calculateHistogram(imageData2, "r");
+    const hist2G = this.processor.calculateHistogram(imageData2, "g");
+    const hist2B = this.processor.calculateHistogram(imageData2, "b");
+    const hist2Gray = this.processor.calculateHistogram(imageData2, "gray");
+
+    const chiR = this.processor.chiSquareDistance(hist1R, hist2R);
+    const chiG = this.processor.chiSquareDistance(hist1G, hist2G);
+    const chiB = this.processor.chiSquareDistance(hist1B, hist2B);
+    const chiGray = this.processor.chiSquareDistance(hist1Gray, hist2Gray);
+
+    // Calculate Euclidean Distance
+    const eucR = this.processor.euclideanDistance(data1R, data2R);
+    const eucG = this.processor.euclideanDistance(data1G, data2G);
+    const eucB = this.processor.euclideanDistance(data1B, data2B);
+    const eucGray = this.processor.euclideanDistance(data1Gray, data2Gray);
+
+    // Calculate Manhattan Distance
+    const manhR = this.processor.manhattanDistance(data1R, data2R);
+    const manhG = this.processor.manhattanDistance(data1G, data2G);
+    const manhB = this.processor.manhattanDistance(data1B, data2B);
+    const manhGray = this.processor.manhattanDistance(data1Gray, data2Gray);
+
+    // Calculate SSIM
+    const ssim = this.processor.structuralSimilarity(imageData1, imageData2);
+
+    // Display results
+    this.displayMatchingStats(
+      pearsonR,
+      pearsonG,
+      pearsonB,
+      pearsonGray,
+      chiR,
+      chiG,
+      chiB,
+      chiGray,
+      eucR,
+      eucG,
+      eucB,
+      eucGray,
+      manhR,
+      manhG,
+      manhB,
+      manhGray,
+      ssim
+    );
+
+    // Display images preview
+    this.displayMatchingImages(imageData1, imageData2);
+
+    console.log("✅ Analisis matching berhasil dihitung!");
+  }
+
+  displayMatchingStats(
+    pearsonR,
+    pearsonG,
+    pearsonB,
+    pearsonGray,
+    chiR,
+    chiG,
+    chiB,
+    chiGray,
+    eucR,
+    eucG,
+    eucB,
+    eucGray,
+    manhR,
+    manhG,
+    manhB,
+    manhGray,
+    ssim
+  ) {
+    const statsDiv = document.getElementById("matchingStats");
+    statsDiv.classList.remove("hidden");
+
+    // Update Pearson Correlation
+    document.getElementById("matchPearsonR").textContent = pearsonR.toFixed(4);
+    document.getElementById("matchPearsonG").textContent = pearsonG.toFixed(4);
+    document.getElementById("matchPearsonB").textContent = pearsonB.toFixed(4);
+    document.getElementById("matchPearsonGray").textContent =
+      pearsonGray.toFixed(4);
+
+    // Update Chi-Square
+    document.getElementById("matchChiR").textContent = chiR;
+    document.getElementById("matchChiG").textContent = chiG;
+    document.getElementById("matchChiB").textContent = chiB;
+    document.getElementById("matchChiGray").textContent = chiGray;
+
+    // Update Euclidean Distance
+    document.getElementById("matchEucR").textContent = eucR;
+    document.getElementById("matchEucG").textContent = eucG;
+    document.getElementById("matchEucB").textContent = eucB;
+    document.getElementById("matchEucGray").textContent = eucGray;
+
+    // Update Manhattan Distance
+    document.getElementById("matchManhR").textContent = manhR;
+    document.getElementById("matchManhG").textContent = manhG;
+    document.getElementById("matchManhB").textContent = manhB;
+    document.getElementById("matchManhGray").textContent = manhGray;
+
+    // Update SSIM
+    document.getElementById("matchSSIM").textContent = ssim;
+
+    // Calculate average Pearson correlation
+    const pearsonAvg = (
+      (parseFloat(pearsonR) +
+        parseFloat(pearsonG) +
+        parseFloat(pearsonB) +
+        parseFloat(pearsonGray)) /
+      4
+    ).toFixed(4);
+    document.getElementById("pearsonAvg").textContent = pearsonAvg;
+    document.getElementById("ssimValue").textContent = ssim;
+
+    // Determine match status
+    let matchStatus = "Tidak Mirip";
+    if (parseFloat(pearsonAvg) > 0.9 && parseFloat(ssim) > 0.9) {
+      matchStatus = "✅ Sangat Mirip (Sama)";
+    } else if (parseFloat(pearsonAvg) > 0.7 && parseFloat(ssim) > 0.7) {
+      matchStatus = "🟡 Mirip";
+    } else if (parseFloat(pearsonAvg) > 0.5) {
+      matchStatus = "🟠 Agak Mirip";
+    } else if (parseFloat(pearsonAvg) < 0) {
+      matchStatus = "🔴 Sangat Berbeda (Terbalik)";
+    }
+
+    document.getElementById("matchStatus").textContent = matchStatus;
+  }
+
+  displayMatchingImages(imageData1, imageData2) {
+    // Draw first image
+    const canvas1 = document.getElementById("statsCanvas1");
+    canvas1.width = imageData1.width;
+    canvas1.height = imageData1.height;
+    const ctx1 = canvas1.getContext("2d");
+    ctx1.putImageData(imageData1, 0, 0);
+
+    // Draw second image (resized ke ukuran yang sama jika perlu)
+    const canvas2 = document.getElementById("statsCanvas2");
+    canvas2.width = imageData2.width;
+    canvas2.height = imageData2.height;
+    const ctx2 = canvas2.getContext("2d");
+    ctx2.putImageData(imageData2, 0, 0);
+  }
 }
 
 // Initialize the app
@@ -1092,5 +2354,28 @@ new PixelReader();
 
 console.log("🎨 Image Processing App initialized!");
 console.log(
-  "Features: Pixel Data, Binary/Grayscale, Brightness, Arithmetic, Boolean, Geometry"
+  "✨ Features: Pixel Data, Binary/Grayscale, Brightness, Arithmetic, Boolean, Geometry"
 );
+console.log("📚 Beginner-friendly mode: ON");
+console.log("🌙 Dark theme: ACTIVE");
+
+// Welcome message untuk first-time users
+setTimeout(() => {
+  const welcomeGuide = document.getElementById("welcomeGuide");
+  if (welcomeGuide && !sessionStorage.getItem("visited")) {
+    welcomeGuide.style.animation = "fadeIn 0.5s ease";
+    sessionStorage.setItem("visited", "true");
+  }
+}, 500);
+
+// Add keyboard shortcuts hint
+document.addEventListener("keydown", (e) => {
+  // Ctrl+H untuk toggle welcome guide
+  if (e.ctrlKey && e.key === "h") {
+    e.preventDefault();
+    const welcomeGuide = document.getElementById("welcomeGuide");
+    if (welcomeGuide) {
+      welcomeGuide.classList.toggle("hidden");
+    }
+  }
+});

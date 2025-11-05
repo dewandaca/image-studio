@@ -4,73 +4,202 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Image Conversion</title>
+    <title>Image Processing Studio</title>
   </head>
   <body>
     <div id="app">
       <div class="container">
-        <h1>🎨 Image Processing App</h1>
-        <p class="subtitle">
-          Upload gambar dan pilih operasi image processing yang diinginkan
-        </p>
-
-        <div class="upload-section">
-          <input type="file" id="imageInput" accept="image/*" />
-          <label for="imageInput" class="upload-button">
-            📤 Upload Gambar
-          </label>
-        </div>
-
-        <div id="imagePreview" class="image-preview hidden">
-          <h2>Preview Gambar</h2>
-          <canvas id="imageCanvas"></canvas>
-          <div class="image-info">
-            <span id="imageSize"></span>
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <h1>🎨 Image Studio</h1>
+            <p class="subtitle">Platform Pengolahan Citra Modern & Powerful</p>
           </div>
-        </div>
 
-        <!-- Tab Navigation -->
-        <div id="tabSection" class="tab-section hidden">
-          <div class="tab-nav">
-            <button class="tab-button active" data-tab="pixel-data">
-              📊 Pixel Data
-            </button>
-            <button class="tab-button" data-tab="grayscale">
-              🌑 Grayscale
-            </button>
-            <button class="tab-button" data-tab="binary">⚫⚪ Binary</button>
-            <button class="tab-button" data-tab="brightness">
-              💡 Brightness
-            </button>
-            <button class="tab-button" data-tab="arithmetic">
-              ➕ Arithmetic
-            </button>
-            <button class="tab-button" data-tab="boolean">🔣 Boolean</button>
-            <button class="tab-button" data-tab="geometry">🔄 Geometry</button>
+          <!-- Tab Navigation as Sidebar Menu -->
+          <div id="tabSection" class="tab-section hidden">
+            <div class="tab-nav">
+              <button
+                class="tab-button active"
+                data-tab="pixel-data"
+                title="Lihat data pixel dalam bentuk tabel"
+              >
+                📊 Pixel Data
+              </button>
+              <button
+                class="tab-button"
+                data-tab="grayscale"
+                title="Konversi gambar ke grayscale"
+              >
+                🌑 Grayscale
+              </button>
+              <button
+                class="tab-button"
+                data-tab="binary"
+                title="Konversi gambar ke hitam-putih (binary)"
+              >
+                ⚫⚪ Binary
+              </button>
+              <button
+                class="tab-button"
+                data-tab="brightness"
+                title="Atur kecerahan gambar"
+              >
+                � Brightness
+              </button>
+              <button
+                class="tab-button"
+                data-tab="arithmetic"
+                title="Operasi matematika pada pixel"
+              >
+                ➕ Arithmetic
+              </button>
+              <button
+                class="tab-button"
+                data-tab="boolean"
+                title="Operasi boolean (AND, OR, XOR)"
+              >
+                🔣 Boolean
+              </button>
+              <button
+                class="tab-button"
+                data-tab="geometry"
+                title="Rotasi dan flip gambar"
+              >
+                🔄 Geometry
+              </button>
+              <button
+                class="tab-button"
+                data-tab="histogram"
+                title="Histogram RGB, Grayscale, dan Equalization"
+              >
+                📊 Histogram
+              </button>
+              <button
+                class="tab-button"
+                data-tab="statistics"
+                title="Statistik citra: Pearson, Skewness, Kurtosis, Entropy, Chi-Square"
+              >
+                📈 Statistics
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+          <!-- Welcome Guide for Beginners -->
+          <div id="welcomeGuide" class="info-text" style="margin-bottom: 24px">
+            <strong>👋 Panduan Cepat:</strong><br />
+            1️⃣ Upload gambar menggunakan tombol di bawah<br />
+            2️⃣ Pilih menu di sidebar untuk menggunakan fitur<br />
+            3️⃣ Lihat hasil processing secara real-time<br />
+            <small style="opacity: 0.8"
+              >💡 Hover di atas pixel untuk melihat nilai RGB-nya!</small
+            >
+          </div>
+
+          <div class="upload-section">
+            <input type="file" id="imageInput" accept="image/*" />
+            <label for="imageInput" class="upload-button">
+              📤 Upload Gambar
+            </label>
+            <p
+              style="
+                margin-top: 16px;
+                color: #718096;
+                font-size: 0.9em;
+                font-weight: 600;
+              "
+            >
+              Drag & drop atau klik untuk memilih gambar
+            </p>
+          </div>
+
+          <div id="imagePreview" class="card image-preview hidden">
+            <div class="card-header">
+              <h2>✨ Preview Gambar Original</h2>
+              <div class="image-info">
+                <span id="imageSize"></span>
+              </div>
+            </div>
+            <canvas id="imageCanvas"></canvas>
+            <p
+              style="
+                margin-top: 12px;
+                color: #718096;
+                font-size: 0.9em;
+                font-weight: 500;
+              "
+            >
+              �
+              <em>Gerakkan mouse di atas gambar untuk melihat detail pixel</em>
+            </p>
           </div>
 
           <!-- Tab Content -->
           <div class="tab-content">
             <!-- Pixel Data Tab -->
-            <div id="pixel-data" class="tab-pane active">
-              <h2>Data Pixel</h2>
-              <div class="controls">
-                <label>
-                  <input type="checkbox" id="showAllPixels" />
-                  Tampilkan semua pixel (hati-hati dengan gambar besar!)
-                </label>
+            <div id="pixel-data" class="tab-pane active card">
+              <div class="card-header">
+                <h2>📊 Data Pixel RGB</h2>
+                <p
+                  style="color: #718096; font-size: 0.92em; margin-bottom: 16px"
+                >
+                  Tabel ini menampilkan nilai RGB setiap pixel. Hover untuk
+                  highlight!
+                </p>
+                <div class="controls">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="showAllPixels" />
+                    Tampilkan semua pixel (hati-hati dengan gambar besar!)
+                  </label>
+                </div>
               </div>
+
+              <!-- Add this HTML inside the pixel-data tab div, before the table -->
+              <div class="pixel-search">
+                <div class="input-group">
+                  <label for="pixelX">X:</label>
+                  <input
+                    type="number"
+                    id="pixelX"
+                    min="0"
+                    placeholder="Koordinat X"
+                  />
+                  <label for="pixelY">Y:</label>
+                  <input
+                    type="number"
+                    id="pixelY"
+                    min="0"
+                    placeholder="Koordinat Y"
+                  />
+                  <button id="searchPixel" class="search-button">
+                    Cari Pixel
+                  </button>
+                </div>
+                <div id="searchResult" class="search-result"></div>
+              </div>
+
               <div id="pixelList" class="pixel-list"></div>
             </div>
 
             <!-- Grayscale Tab -->
             <div id="grayscale" class="tab-pane">
-              <h2>Grayscale Conversion</h2>
+              <h2>🌑 Grayscale Conversion</h2>
+              <p style="color: #718096; font-size: 0.92em; margin-bottom: 20px">
+                Konversi gambar berwarna menjadi abu-abu (grayscale) secara
+                otomatis
+              </p>
               <div class="feature-controls">
                 <div class="control-group">
                   <p class="info-text">
                     📌 Konversi otomatis menggunakan luminance formula: 0.299R +
-                    0.587G + 0.114B
+                    0.587G + 0.114B<br />
+                    <small style="opacity: 0.8"
+                      >Formula ini memperhitungkan sensitivitas mata manusia
+                      terhadap warna</small
+                    >
                   </p>
                 </div>
                 <div class="control-group">
@@ -78,22 +207,48 @@
                     class="action-button secondary"
                     id="resetImageGrayscale"
                   >
-                    Reset ke Original
+                    🔄 Reset ke Original
                   </button>
                 </div>
               </div>
               <div class="canvas-container">
+                <p>📸 Hasil Grayscale</p>
                 <canvas id="processCanvasGrayscale"></canvas>
               </div>
+              <div class="pixel-search">
+                <div class="input-group">
+                  <label for="pixelXGrayscale">X:</label>
+                  <input
+                    type="number"
+                    id="pixelXGrayscale"
+                    min="0"
+                    placeholder="Koordinat X"
+                  />
+                  <label for="pixelYGrayscale">Y:</label>
+                  <input
+                    type="number"
+                    id="pixelYGrayscale"
+                    min="0"
+                    placeholder="Koordinat Y"
+                  />
+                  <button id="searchPixelGrayscale" class="search-button">
+                    Cari Pixel
+                  </button>
+                </div>
+                <div id="searchResultGrayscale" class="search-result"></div>
+              </div>
               <div class="matrix-display">
-                <h3>RGB Matrix (100x100 pixel pertama)</h3>
+                <h3>📋 RGB Matrix (100x100 pixel pertama)</h3>
                 <div id="matrixListGrayscale" class="pixel-list"></div>
               </div>
             </div>
 
             <!-- Binary Tab -->
             <div id="binary" class="tab-pane">
-              <h2>Binary Conversion</h2>
+              <h2>⚫⚪ Binary Conversion</h2>
+              <p style="color: #94a3b8; font-size: 0.92em; margin-bottom: 20px">
+                Ubah gambar menjadi hitam-putih berdasarkan nilai threshold
+              </p>
               <div class="feature-controls">
                 <div class="control-group">
                   <label for="thresholdSlider">Threshold (Real-time):</label>
@@ -104,29 +259,60 @@
                     max="255"
                     value="128"
                   />
-                  <span id="thresholdValue">128</span>
+                  <span
+                    id="thresholdValue"
+                    style="color: #60a5fa; font-weight: 600; font-size: 1.1em"
+                    >128</span
+                  >
                   <p class="help-text">
-                    💡 Geser slider untuk melihat perubahan langsung
+                    💡 Geser slider untuk melihat perubahan langsung. Pixel di
+                    atas threshold = putih, di bawah = hitam
                   </p>
                 </div>
                 <div class="control-group">
                   <button class="action-button secondary" id="resetImageBinary">
-                    Reset ke Original
+                    🔄 Reset ke Original
                   </button>
                 </div>
               </div>
               <div class="canvas-container">
+                <p>📸 Hasil Binary</p>
                 <canvas id="processCanvasBinary"></canvas>
               </div>
+              <div class="pixel-search">
+                <div class="input-group">
+                  <label for="pixelXBinary">X:</label>
+                  <input
+                    type="number"
+                    id="pixelXBinary"
+                    min="0"
+                    placeholder="Koordinat X"
+                  />
+                  <label for="pixelYBinary">Y:</label>
+                  <input
+                    type="number"
+                    id="pixelYBinary"
+                    min="0"
+                    placeholder="Koordinat Y"
+                  />
+                  <button id="searchPixelBinary" class="search-button">
+                    Cari Pixel
+                  </button>
+                </div>
+                <div id="searchResultBinary" class="search-result"></div>
+              </div>
               <div class="matrix-display">
-                <h3>RGB Matrix (100x100 pixel pertama)</h3>
+                <h3>📋 RGB Matrix (100x100 pixel pertama)</h3>
                 <div id="matrixListBinary" class="pixel-list"></div>
               </div>
             </div>
 
             <!-- Brightness Tab -->
             <div id="brightness" class="tab-pane">
-              <h2>Brightness Adjustment</h2>
+              <h2>💡 Brightness Adjustment</h2>
+              <p style="color: #94a3b8; font-size: 0.92em; margin-bottom: 20px">
+                Atur kecerahan gambar dengan menambah atau mengurangi nilai RGB
+              </p>
               <div class="feature-controls">
                 <div class="control-group">
                   <label for="brightnessSlider"
@@ -139,44 +325,79 @@
                     max="100"
                     value="0"
                   />
-                  <span id="brightnessValue">0</span>
+                  <span
+                    id="brightnessValue"
+                    style="color: #60a5fa; font-weight: 600; font-size: 1.1em"
+                    >0</span
+                  >
                   <p class="help-text">
-                    💡 Geser slider untuk melihat perubahan langsung
+                    💡 Geser ke kanan untuk lebih terang, ke kiri untuk lebih
+                    gelap
                   </p>
                 </div>
                 <div class="control-group">
                   <button class="action-button secondary" id="resetImage2">
-                    Reset ke Original
+                    🔄 Reset ke Original
                   </button>
                 </div>
               </div>
               <div class="canvas-container">
+                <p>📸 Hasil Brightness</p>
                 <canvas id="processCanvas2"></canvas>
               </div>
+              <div class="pixel-search">
+                <div class="input-group">
+                  <label for="pixelXBrightness">X:</label>
+                  <input
+                    type="number"
+                    id="pixelXBrightness"
+                    min="0"
+                    placeholder="Koordinat X"
+                  />
+                  <label for="pixelYBrightness">Y:</label>
+                  <input
+                    type="number"
+                    id="pixelYBrightness"
+                    min="0"
+                    placeholder="Koordinat Y"
+                  />
+                  <button id="searchPixelBrightness" class="search-button">
+                    Cari Pixel
+                  </button>
+                </div>
+                <div id="searchResultBrightness" class="search-result"></div>
+              </div>
               <div class="matrix-display">
-                <h3>RGB Matrix (100x100 pixel pertama)</h3>
+                <h3>📋 RGB Matrix (100x100 pixel pertama)</h3>
                 <div id="matrixList2" class="pixel-list"></div>
               </div>
             </div>
 
             <!-- Arithmetic Tab -->
             <div id="arithmetic" class="tab-pane">
-              <h2>Arithmetic Operations</h2>
+              <h2>➕ Arithmetic Operations</h2>
+              <p style="color: #94a3b8; font-size: 0.92em; margin-bottom: 20px">
+                Lakukan operasi matematika pada pixel: tambah, kurang, atau kali
+              </p>
               <div class="feature-controls">
                 <div class="control-group">
                   <label>Operasi:</label>
                   <select id="arithmeticOp">
-                    <option value="add">Addition (+)</option>
-                    <option value="subtract">Subtraction (-)</option>
-                    <option value="multiply">Multiplication (*)</option>
+                    <option value="add">➕ Addition (Tambah)</option>
+                    <option value="subtract">➖ Subtraction (Kurang)</option>
+                    <option value="multiply">✖️ Multiplication (Kali)</option>
                   </select>
                 </div>
                 <div class="control-group">
                   <label>Mode:</label>
                   <select id="arithmeticMode">
-                    <option value="constant">Dengan Konstanta</option>
-                    <option value="image">Dengan Image Lain</option>
+                    <option value="constant">🔢 Dengan Konstanta</option>
+                    <option value="image">🖼️ Dengan Image Lain</option>
                   </select>
+                  <p class="help-text">
+                    💡 Konstanta: operasi dengan angka tetap. Image: operasi
+                    antar 2 gambar
+                  </p>
                 </div>
                 <div class="control-group" id="constantGroup">
                   <label for="constantValue">Nilai Konstanta:</label>
@@ -209,33 +430,63 @@
                 </div>
                 <div class="control-group">
                   <button class="action-button" id="applyArithmetic">
-                    Apply Arithmetic
+                    ✨ Apply Arithmetic
                   </button>
                   <button class="action-button secondary" id="resetImage3">
-                    Reset ke Original
+                    🔄 Reset ke Original
                   </button>
                 </div>
               </div>
               <div class="canvas-container">
+                <p>📸 Hasil Operasi</p>
                 <canvas id="processCanvas3"></canvas>
               </div>
+              <div class="pixel-search">
+                <div class="input-group">
+                  <label for="pixelXArithmetic">X:</label>
+                  <input
+                    type="number"
+                    id="pixelXArithmetic"
+                    min="0"
+                    placeholder="Koordinat X"
+                  />
+                  <label for="pixelYArithmetic">Y:</label>
+                  <input
+                    type="number"
+                    id="pixelYArithmetic"
+                    min="0"
+                    placeholder="Koordinat Y"
+                  />
+                  <button id="searchPixelArithmetic" class="search-button">
+                    Cari Pixel
+                  </button>
+                </div>
+                <div id="searchResultArithmetic" class="search-result"></div>
+              </div>
               <div class="matrix-display">
-                <h3>RGB Matrix (100x100 pixel pertama)</h3>
+                <h3>📋 RGB Matrix (100x100 pixel pertama)</h3>
                 <div id="matrixList3" class="pixel-list"></div>
               </div>
             </div>
 
             <!-- Boolean Tab -->
             <div id="boolean" class="tab-pane">
-              <h2>Boolean Operations</h2>
+              <h2>🔣 Boolean Operations</h2>
+              <p style="color: #94a3b8; font-size: 0.92em; margin-bottom: 20px">
+                Operasi logika bitwise antara dua gambar (AND, OR, XOR)
+              </p>
               <div class="feature-controls">
                 <div class="control-group">
                   <label>Operasi Boolean:</label>
                   <select id="booleanOp">
-                    <option value="and">AND</option>
-                    <option value="or">OR</option>
-                    <option value="xor">XOR</option>
+                    <option value="and">AND (Irisan)</option>
+                    <option value="or">OR (Gabungan)</option>
+                    <option value="xor">XOR (Perbedaan)</option>
                   </select>
+                  <p class="help-text">
+                    💡 AND: ambil yang gelap | OR: ambil yang terang | XOR:
+                    ambil perbedaan
+                  </p>
                 </div>
                 <div class="control-group">
                   <label for="booleanImageInput">Upload Image Kedua:</label>
@@ -257,21 +508,21 @@
                 </div>
                 <div class="control-group">
                   <button class="action-button" id="applyBoolean">
-                    Apply Boolean
+                    ✨ Apply Boolean
                   </button>
                   <button class="action-button secondary" id="resetImage4">
-                    Reset ke Original
+                    🔄 Reset ke Original
                   </button>
                 </div>
               </div>
               <div class="canvas-container dual">
                 <div>
-                  <p>Image 1 (Original)</p>
+                  <p>🖼️ Image 1 (Original)</p>
                   <canvas id="booleanCanvas1"></canvas>
                 </div>
                 <div>
                   <p>
-                    Image 2
+                    🖼️ Image 2
                     <span id="image2StatusPreview" class="status-text"
                       >(belum di-upload)</span
                     >
@@ -280,64 +531,506 @@
                 </div>
               </div>
               <div class="canvas-container">
-                <p>Result</p>
+                <p>📸 Hasil Operasi Boolean</p>
                 <canvas id="processCanvas4"></canvas>
               </div>
+              <div class="pixel-search">
+                <div class="input-group">
+                  <label for="pixelXBoolean">X:</label>
+                  <input
+                    type="number"
+                    id="pixelXBoolean"
+                    min="0"
+                    placeholder="Koordinat X"
+                  />
+                  <label for="pixelYBoolean">Y:</label>
+                  <input
+                    type="number"
+                    id="pixelYBoolean"
+                    min="0"
+                    placeholder="Koordinat Y"
+                  />
+                  <button id="searchPixelBoolean" class="search-button">
+                    Cari Pixel
+                  </button>
+                </div>
+                <div id="searchResultBoolean" class="search-result"></div>
+              </div>
               <div class="matrix-display">
-                <h3>RGB Matrix Result (100x100 pixel pertama)</h3>
+                <h3>📋 RGB Matrix Result (100x100 pixel pertama)</h3>
                 <div id="matrixList4" class="pixel-list"></div>
               </div>
             </div>
 
             <!-- Geometry Tab -->
             <div id="geometry" class="tab-pane">
-              <h2>Geometric Transformations</h2>
+              <h2>🔄 Geometric Transformations</h2>
+              <p style="color: #94a3b8; font-size: 0.92em; margin-bottom: 20px">
+                Rotasi dan flip gambar dengan berbagai sudut
+              </p>
               <div class="feature-controls">
                 <div class="control-group">
-                  <h3>Rotasi</h3>
+                  <h3>Rotasi Gambar</h3>
                   <button class="action-button" id="rotate90">
-                    Rotasi 90°
+                    🔄 Rotasi 90°
                   </button>
                   <button class="action-button" id="rotate180">
-                    Rotasi 180°
+                    🔃 Rotasi 180°
                   </button>
                   <button class="action-button" id="rotate270">
-                    Rotasi 270°
+                    ↩️ Rotasi 270°
                   </button>
+                  <p class="help-text">💡 Rotasi searah jarum jam</p>
                 </div>
                 <div class="control-group">
-                  <h3>Flipping</h3>
+                  <h3>Flip Gambar</h3>
                   <button class="action-button" id="flipHorizontal">
-                    Flip Horizontal
+                    ↔️ Flip Horizontal
                   </button>
                   <button class="action-button" id="flipVertical">
-                    Flip Vertical
+                    ↕️ Flip Vertical
                   </button>
+                  <p class="help-text">
+                    💡 Mirror gambar secara horizontal atau vertical
+                  </p>
                 </div>
                 <div class="control-group">
                   <button class="action-button secondary" id="resetImage5">
-                    Reset ke Original
+                    🔄 Reset ke Original
                   </button>
                 </div>
               </div>
               <div class="canvas-container">
+                <p>📸 Hasil Transformasi</p>
                 <canvas id="processCanvas5"></canvas>
               </div>
+              <div class="pixel-search">
+                <div class="input-group">
+                  <label for="pixelXGeometry">X:</label>
+                  <input
+                    type="number"
+                    id="pixelXGeometry"
+                    min="0"
+                    placeholder="Koordinat X"
+                  />
+                  <label for="pixelYGeometry">Y:</label>
+                  <input
+                    type="number"
+                    id="pixelYGeometry"
+                    min="0"
+                    placeholder="Koordinat Y"
+                  />
+                  <button id="searchPixelGeometry" class="search-button">
+                    Cari Pixel
+                  </button>
+                </div>
+                <div id="searchResultGeometry" class="search-result"></div>
+              </div>
               <div class="matrix-display">
-                <h3>RGB Matrix (100x100 pixel pertama)</h3>
+                <h3>📋 RGB Matrix (100x100 pixel pertama)</h3>
                 <div id="matrixList5" class="pixel-list"></div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div id="hoverInfo" class="hover-info hidden">
-          <div class="hover-content">
-            <strong>Koordinat:</strong> <span id="hoverCoord"></span><br />
-            <strong>RGB:</strong> <span id="hoverRGB"></span><br />
-            <div id="hoverColor" class="color-box"></div>
+            <!-- Histogram Tab -->
+            <div id="histogram" class="tab-pane">
+              <h2>📊 Histogram Analysis & Processing</h2>
+              <p style="color: #94a3b8; font-size: 0.92em; margin-bottom: 20px">
+                Analisis distribusi pixel dengan histogram RGB & Grayscale,
+                serta histogram equalization
+              </p>
+
+              <!-- Histogram RGB & Grayscale Section -->
+              <div class="histogram-section">
+                <h3>📈 Histogram RGB & Grayscale</h3>
+                <div class="histogram-controls">
+                  <button class="action-button" id="generateHistogram">
+                    🔍 Generate Histogram
+                  </button>
+                </div>
+
+                <!-- Histogram Charts -->
+                <div class="histogram-charts">
+                  <div class="histogram-chart-container">
+                    <h4 style="color: #ef4444">🔴 Red Channel</h4>
+                    <canvas id="histogramRed" width="400" height="220"></canvas>
+                  </div>
+                  <div class="histogram-chart-container">
+                    <h4 style="color: #22c55e">🟢 Green Channel</h4>
+                    <canvas
+                      id="histogramGreen"
+                      width="400"
+                      height="220"
+                    ></canvas>
+                  </div>
+                  <div class="histogram-chart-container">
+                    <h4 style="color: #3b82f6">🔵 Blue Channel</h4>
+                    <canvas
+                      id="histogramBlue"
+                      width="400"
+                      height="220"
+                    ></canvas>
+                  </div>
+                  <div class="histogram-chart-container">
+                    <h4 style="color: #94a3b8">⚪ Grayscale</h4>
+                    <canvas
+                      id="histogramGray"
+                      width="400"
+                      height="220"
+                    ></canvas>
+                  </div>
+                  <div class="histogram-chart-container">
+                    <h4 style="color: #a78bfa">🌈 RGB Combined</h4>
+                    <canvas
+                      id="histogramCombined"
+                      width="400"
+                      height="220"
+                    ></canvas>
+                  </div>
+                </div>
+
+                <!-- Histogram Data Table -->
+                <div class="histogram-data">
+                  <h4>📋 Histogram Data (nilai 0-255)</h4>
+                  <div class="histogram-table-wrapper">
+                    <div id="histogramTable"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Auto Threshold Binary Section -->
+              <div class="histogram-section">
+                <h3>⚫⚪ Auto-Threshold Binary (Dua Puncak)</h3>
+                <p class="info-text">
+                  💡 Threshold otomatis dihitung dari rata-rata dua puncak
+                  histogram grayscale
+                </p>
+                <div class="histogram-controls">
+                  <button class="action-button" id="autoThresholdBinary">
+                    ✨ Generate Binary (Auto-Threshold)
+                  </button>
+                  <div id="thresholdInfo" class="info-box hidden">
+                    <strong>Threshold Otomatis:</strong>
+                    <span id="autoThresholdValue">-</span><br />
+                    <small
+                      >Puncak 1: <span id="peak1Value">-</span> | Puncak 2:
+                      <span id="peak2Value">-</span></small
+                    >
+                  </div>
+                </div>
+                <div class="canvas-container">
+                  <p>📸 Hasil Binary (Auto-Threshold)</p>
+                  <canvas id="histogramBinaryCanvas"></canvas>
+                </div>
+              </div>
+
+              <!-- Histogram Equalization Section -->
+              <div class="histogram-section">
+                <h3>⚖️ Histogram Equalization (Uniform)</h3>
+                <p class="info-text">
+                  💡 Equalization menyebarkan distribusi intensitas pixel secara
+                  merata untuk meningkatkan kontras
+                </p>
+                <div class="histogram-controls">
+                  <button class="action-button" id="applyEqualization">
+                    ✨ Apply Equalization
+                  </button>
+                  <button
+                    class="action-button secondary"
+                    id="resetEqualization"
+                  >
+                    🔄 Reset ke Original
+                  </button>
+                </div>
+
+                <!-- Before/After Stats -->
+                <div class="stats-comparison">
+                  <div class="stats-card">
+                    <h4>📊 Statistik SEBELUM Equalization</h4>
+                    <div class="stats-content">
+                      <p>
+                        <strong>Mean (Rata-rata):</strong>
+                        <span id="meanBefore">-</span>
+                      </p>
+                      <p>
+                        <strong>Standard Deviation:</strong>
+                        <span id="stdBefore">-</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div class="stats-card">
+                    <h4>📈 Statistik SESUDAH Equalization</h4>
+                    <div class="stats-content">
+                      <p>
+                        <strong>Mean (Rata-rata):</strong>
+                        <span id="meanAfter">-</span>
+                      </p>
+                      <p>
+                        <strong>Standard Deviation:</strong>
+                        <span id="stdAfter">-</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Before/After Image -->
+                <div class="canvas-container dual">
+                  <div>
+                    <p>🖼️ Original Image</p>
+                    <canvas id="equalizationBefore"></canvas>
+                  </div>
+                  <div>
+                    <p>✨ After Equalization</p>
+                    <canvas id="equalizationAfter"></canvas>
+                  </div>
+                </div>
+
+                <!-- Before/After Histogram Comparison -->
+                <div class="histogram-comparison">
+                  <div class="histogram-chart-container">
+                    <h4>Histogram Sebelum Equalization</h4>
+                    <canvas
+                      id="histogramBeforeEq"
+                      width="400"
+                      height="220"
+                    ></canvas>
+                  </div>
+                  <div class="histogram-chart-container">
+                    <h4>Histogram Sesudah Equalization</h4>
+                    <canvas
+                      id="histogramAfterEq"
+                      width="400"
+                      height="220"
+                    ></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Statistics Tab -->
+            <div id="statistics" class="tab-pane">
+              <h2>📈 Analisis Statistik Citra</h2>
+              <p style="color: #94a3b8; font-size: 0.92em; margin-bottom: 20px">
+                Hitung statistik citra: Pearson Correlation, Skewness, Kurtosis,
+                Entropy, dan Chi-Square untuk satu atau dua gambar
+              </p>
+
+              <!-- Single Image Statistics Section -->
+              <div class="statistics-section">
+                <h3>🎯 Statistik Gambar Pertama</h3>
+                <p class="info-text">
+                  💡 Klik tombol di bawah untuk menghitung nilai statistik dari
+                  gambar yang sudah di-upload
+                </p>
+                <div class="feature-controls">
+                  <div class="control-group">
+                    <button class="action-button" id="analyzeFirstImage">
+                      🔍 Hitung Statistik Gambar Pertama
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Statistics Results Table -->
+                <div class="statistics-results hidden" id="firstImageStats">
+                  <div class="stats-card">
+                    <h4>📊 Hasil Statistik Gambar Pertama</h4>
+                    <table class="statistics-table">
+                      <thead>
+                        <tr>
+                          <th>Metrik Statistik</th>
+                          <th>Red Channel</th>
+                          <th>Green Channel</th>
+                          <th>Blue Channel</th>
+                          <th>Grayscale</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><strong>Mean</strong></td>
+                          <td id="stats1MeanR">-</td>
+                          <td id="stats1MeanG">-</td>
+                          <td id="stats1MeanB">-</td>
+                          <td id="stats1MeanGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Std Dev</strong></td>
+                          <td id="stats1StdR">-</td>
+                          <td id="stats1StdG">-</td>
+                          <td id="stats1StdB">-</td>
+                          <td id="stats1StdGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Skewness</strong></td>
+                          <td id="stats1SkewR">-</td>
+                          <td id="stats1SkewG">-</td>
+                          <td id="stats1SkewB">-</td>
+                          <td id="stats1SkewGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Kurtosis</strong></td>
+                          <td id="stats1KurtR">-</td>
+                          <td id="stats1KurtG">-</td>
+                          <td id="stats1KurtB">-</td>
+                          <td id="stats1KurtGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Entropy</strong></td>
+                          <td id="stats1EntrR">-</td>
+                          <td id="stats1EntrG">-</td>
+                          <td id="stats1EntrB">-</td>
+                          <td id="stats1EntrGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Min Value</strong></td>
+                          <td id="stats1MinR">-</td>
+                          <td id="stats1MinG">-</td>
+                          <td id="stats1MinB">-</td>
+                          <td id="stats1MinGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Max Value</strong></td>
+                          <td id="stats1MaxR">-</td>
+                          <td id="stats1MaxG">-</td>
+                          <td id="stats1MaxB">-</td>
+                          <td id="stats1MaxGray">-</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Image Matching Section -->
+              <div class="statistics-section">
+                <h3>🔗 Matching Antara Dua Gambar</h3>
+                <p class="info-text">
+                  💡 Upload gambar kedua dan bandingkan dengan gambar pertama
+                  menggunakan berbagai metrik kemiripan
+                </p>
+                <div class="feature-controls">
+                  <div class="control-group">
+                    <label for="statsSecondImageInput"
+                      >Upload Gambar untuk Perbandingan:</label
+                    >
+                    <input
+                      type="file"
+                      id="statsSecondImageInput"
+                      accept="image/*"
+                      class="hidden-input"
+                    />
+                    <label
+                      for="statsSecondImageInput"
+                      class="upload-button-secondary"
+                    >
+                      📁 Pilih Gambar Kedua
+                    </label>
+                    <span id="statsImage2Status" class="status-text"
+                      >(belum di-upload)</span
+                    >
+                  </div>
+                  <div class="control-group">
+                    <button class="action-button" id="analyzeMatching" disabled>
+                      🔗 Hitung Matching
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Matching Results -->
+                <div class="statistics-results hidden" id="matchingStats">
+                  <div class="stats-card">
+                    <h4>🔍 Hasil Perbandingan Antar Gambar</h4>
+                    <table class="statistics-table">
+                      <thead>
+                        <tr>
+                          <th>Metrik Matching</th>
+                          <th>Red Channel</th>
+                          <th>Green Channel</th>
+                          <th>Blue Channel</th>
+                          <th>Grayscale</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><strong>Pearson Correlation</strong></td>
+                          <td id="matchPearsonR">-</td>
+                          <td id="matchPearsonG">-</td>
+                          <td id="matchPearsonB">-</td>
+                          <td id="matchPearsonGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Chi-Square</strong></td>
+                          <td id="matchChiR">-</td>
+                          <td id="matchChiG">-</td>
+                          <td id="matchChiB">-</td>
+                          <td id="matchChiGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Euclidean Distance</strong></td>
+                          <td id="matchEucR">-</td>
+                          <td id="matchEucG">-</td>
+                          <td id="matchEucB">-</td>
+                          <td id="matchEucGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Manhattan Distance</strong></td>
+                          <td id="matchManhR">-</td>
+                          <td id="matchManhG">-</td>
+                          <td id="matchManhB">-</td>
+                          <td id="matchManhGray">-</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Structural Similarity (SSIM)</strong></td>
+                          <td colspan="4" id="matchSSIM">-</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Image Comparison Preview -->
+                  <div class="canvas-container dual">
+                    <div>
+                      <p>🖼️ Gambar Pertama</p>
+                      <canvas id="statsCanvas1"></canvas>
+                    </div>
+                    <div>
+                      <p>🖼️ Gambar Kedua</p>
+                      <canvas id="statsCanvas2"></canvas>
+                    </div>
+                  </div>
+
+                  <!-- Similarity Score Summary -->
+                  <div class="similarity-summary">
+                    <h4>📌 Ringkasan Kemiripan</h4>
+                    <div class="similarity-score">
+                      <div class="score-item">
+                        <span>Pearson Avg:</span>
+                        <strong id="pearsonAvg">-</strong>
+                        <span class="score-range">([-1, 1])</span>
+                      </div>
+                      <div class="score-item">
+                        <span>SSIM:</span>
+                        <strong id="ssimValue">-</strong>
+                        <span class="score-range">([-1, 1])</span>
+                      </div>
+                      <div class="score-item">
+                        <span>Match Status:</span>
+                        <strong id="matchStatus">-</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+
+          <div id="hoverInfo" class="hover-info hidden">
+            <div class="hover-content">
+              <strong>Koordinat:</strong> <span id="hoverCoord"></span><br />
+              <strong>RGB:</strong> <span id="hoverRGB"></span><br />
+              <div id="hoverColor" class="color-box"></div>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
     <script type="module" src="/src/main.js"></script>
