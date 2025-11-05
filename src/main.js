@@ -514,9 +514,13 @@ class ImageProcessor {
     // Mean
     const mean = values.reduce((a, b) => a + b) / n;
 
-    // Min & Max
-    const min = Math.min(...values);
-    const max = Math.max(...values);
+    // Min & Max - Gunakan loop manual untuk menghindari stack overflow pada gambar besar
+    let min = values[0];
+    let max = values[0];
+    for (let i = 1; i < n; i++) {
+      if (values[i] < min) min = values[i];
+      if (values[i] > max) max = values[i];
+    }
 
     // Standard Deviation
     const variance =
@@ -2395,16 +2399,33 @@ class PixelReader {
     document.getElementById("pearsonAvg").textContent = pearsonAvg;
     document.getElementById("ssimValue").textContent = ssim;
 
-    // Determine match status
+    // Determine match status - Multi-metric interpretation
     let matchStatus = "Tidak Mirip";
-    if (parseFloat(pearsonAvg) > 0.9 && parseFloat(ssim) > 0.9) {
+    const pearsonVal = parseFloat(pearsonAvg);
+    const ssimVal = parseFloat(ssim);
+
+    if (ssimVal > 0.9 && pearsonVal > 0.9) {
+      // Sangat mirip dalam struktur dan linear correlation
+      matchStatus = "✅ Sangat Mirip (Identik)";
+    } else if (ssimVal > 0.9 && pearsonVal > 0.5) {
+      // SSIM tinggi = struktur mirip, Pearson tinggi = scale mirip
       matchStatus = "✅ Sangat Mirip (Sama)";
-    } else if (parseFloat(pearsonAvg) > 0.7 && parseFloat(ssim) > 0.7) {
+    } else if (ssimVal > 0.9 && pearsonVal >= 0) {
+      // SSIM tinggi tapi Pearson rendah = mirip tapi beda skala/brightness
+      matchStatus = "🟡 Mirip (Beda Brightness/Kontras)";
+    } else if (ssimVal > 0.9 && pearsonVal < 0) {
+      // SSIM tinggi tapi Pearson negatif = mirip tapi terbalik/inverted
+      matchStatus = "🟠 Mirip tapi Terbalik/Inverted";
+    } else if (ssimVal > 0.7 && pearsonVal > 0.7) {
       matchStatus = "🟡 Mirip";
-    } else if (parseFloat(pearsonAvg) > 0.5) {
+    } else if (ssimVal > 0.7 || pearsonVal > 0.7) {
       matchStatus = "🟠 Agak Mirip";
-    } else if (parseFloat(pearsonAvg) < 0) {
-      matchStatus = "🔴 Sangat Berbeda (Terbalik)";
+    } else if (ssimVal > 0.5 || pearsonVal > 0.5) {
+      matchStatus = "🟠 Agak Mirip";
+    } else if (pearsonVal < -0.5) {
+      matchStatus = "🔴 Terbalik/Negative Correlation";
+    } else {
+      matchStatus = "🔴 Sangat Berbeda";
     }
 
     document.getElementById("matchStatus").textContent = matchStatus;
