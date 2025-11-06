@@ -1619,6 +1619,194 @@ input[type="checkbox"] {
   gap: 16px;
 }
 
+/* Matching Comparison Table */
+.matching-comparison {
+  margin-top: 32px;
+  padding: 24px;
+  background: white;
+  border-radius: 12px;
+  border: 2px solid #48bb78;
+  box-shadow: 0 4px 16px rgba(72, 187, 120, 0.15);
+}
+
+.matching-comparison h4 {
+  color: #22543d;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.matching-comparison > .info-text {
+  margin-bottom: 20px;
+}
+
+.comparison-table-wrapper {
+  overflow-x: auto;
+  margin-bottom: 24px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 0.95em;
+}
+
+.comparison-table thead {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  font-weight: 700;
+  color: white;
+  text-transform: uppercase;
+  font-size: 0.85em;
+  letter-spacing: 0.5px;
+}
+
+.comparison-table th {
+  padding: 14px 12px;
+  text-align: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  first-letter {
+    text-transform: uppercase;
+  }
+}
+
+.comparison-table th:first-child {
+  text-align: left;
+  min-width: 200px;
+}
+
+.comparison-table th:last-child {
+  border-right: none;
+  min-width: 150px;
+}
+
+.comparison-table tbody tr {
+  border-bottom: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.comparison-table tbody tr:hover {
+  background: #f0fff4;
+  box-shadow: inset 4px 0 0 #48bb78;
+}
+
+.comparison-table tbody tr:last-child {
+  border-bottom: 2px solid #48bb78;
+}
+
+.comparison-table td {
+  padding: 12px;
+  color: #2d3748;
+  font-weight: 500;
+}
+
+.comparison-table td:first-child {
+  text-align: left;
+  color: #22543d;
+  font-weight: 700;
+  background: #f7fffd;
+  min-width: 200px;
+}
+
+.comparison-table td:not(:first-child) {
+  text-align: center;
+  font-family: "Courier New", monospace;
+  font-size: 0.92em;
+  color: #4a5568;
+}
+
+/* Interpret Cell - untuk interpretasi metrik */
+.interpret-cell {
+  background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+  font-weight: 700;
+  color: #22543d;
+  min-width: 140px;
+}
+
+.comparison-table tbody tr:hover .interpret-cell {
+  background: #d6f5e8;
+}
+
+/* SSIM Row - special styling */
+.ssim-row td {
+  padding: 14px 12px;
+  background: linear-gradient(135deg, #fef5e7 0%, #fff9e6 100%);
+}
+
+.ssim-row td:first-child {
+  background: linear-gradient(135deg, #fef5e7 0%, #fff9e6 100%);
+}
+
+.ssim-row:hover {
+  background: #fffbf0;
+}
+
+.ssim-row:hover .interpret-cell {
+  background: #ffe8b6;
+}
+
+/* Metrics Explanation Grid */
+.metrics-explanation {
+  margin-top: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+  border-radius: 10px;
+  border-left: 4px solid #48bb78;
+}
+
+.metrics-explanation h4 {
+  color: #22543d;
+  font-size: 1.05em;
+  margin-bottom: 16px;
+  font-weight: 700;
+}
+
+.explanation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.explanation-item {
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  border-left: 3px solid #48bb78;
+  box-shadow: 0 2px 6px rgba(72, 187, 120, 0.1);
+  transition: all 0.3s ease;
+}
+
+.explanation-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.15);
+}
+
+.explanation-item strong {
+  color: #22543d;
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.95em;
+}
+
+.explanation-item p {
+  color: #4a5568;
+  font-size: 0.85em;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.explanation-item small {
+  display: block;
+  color: #718096;
+  margin-top: 4px;
+  font-style: italic;
+}
+
 .score-item {
   display: flex;
   flex-direction: column;

@@ -1094,6 +1094,130 @@
                       </div>
                     </div>
                   </div>
+
+                  <!-- Comparison Table -->
+                  <div class="matching-comparison">
+                    <h4>📊 Perbandingan Metrik Matching</h4>
+                    <p class="info-text">
+                      💡 Tabel ini menunjukkan perbandingan metrik matching
+                      antara gambar 1 dan gambar 2 untuk setiap channel
+                    </p>
+                    <div class="comparison-table-wrapper">
+                      <table class="comparison-table">
+                        <thead>
+                          <tr>
+                            <th>Metrik</th>
+                            <th>Red</th>
+                            <th>Green</th>
+                            <th>Blue</th>
+                            <th>Grayscale</th>
+                            <th>Interpretasi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><strong>Pearson Correlation</strong></td>
+                            <td id="cmpPearsonR">-</td>
+                            <td id="cmpPearsonG">-</td>
+                            <td id="cmpPearsonB">-</td>
+                            <td id="cmpPearsonGray">-</td>
+                            <td id="cmpPearsonInterpret" class="interpret-cell">
+                              -
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><strong>Chi-Square Distance</strong></td>
+                            <td id="cmpChiR">-</td>
+                            <td id="cmpChiG">-</td>
+                            <td id="cmpChiB">-</td>
+                            <td id="cmpChiGray">-</td>
+                            <td id="cmpChiInterpret" class="interpret-cell">
+                              -
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><strong>Euclidean Distance</strong></td>
+                            <td id="cmpEucR">-</td>
+                            <td id="cmpEucG">-</td>
+                            <td id="cmpEucB">-</td>
+                            <td id="cmpEucGray">-</td>
+                            <td id="cmpEucInterpret" class="interpret-cell">
+                              -
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><strong>Manhattan Distance</strong></td>
+                            <td id="cmpManhR">-</td>
+                            <td id="cmpManhG">-</td>
+                            <td id="cmpManhB">-</td>
+                            <td id="cmpManhGray">-</td>
+                            <td id="cmpManhInterpret" class="interpret-cell">
+                              -
+                            </td>
+                          </tr>
+                          <tr class="ssim-row">
+                            <td>
+                              <strong>Structural Similarity (SSIM)</strong>
+                            </td>
+                            <td colspan="4" id="cmpSSIM">-</td>
+                            <td id="cmpSSIMInterpret" class="interpret-cell">
+                              -
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <!-- Metrics Explanation -->
+                    <div class="metrics-explanation">
+                      <h4>📖 Penjelasan Metrik</h4>
+                      <div class="explanation-grid">
+                        <div class="explanation-item">
+                          <strong>Pearson Correlation:</strong>
+                          <p>
+                            Mengukur korelasi linear antar channel. Range: [-1,
+                            1]<br />
+                            <small
+                              >1 = perfect positive | 0 = tidak ada korelasi |
+                              -1 = perfect negative</small
+                            >
+                          </p>
+                        </div>
+                        <div class="explanation-item">
+                          <strong>Chi-Square:</strong>
+                          <p>
+                            Mengukur perbedaan distribusi histogram. Range: [0,
+                            ∞)<br />
+                            <small
+                              >0 = distribusi identik | Lebih tinggi = lebih
+                              berbeda</small
+                            >
+                          </p>
+                        </div>
+                        <div class="explanation-item">
+                          <strong>Euclidean Distance:</strong>
+                          <p>
+                            Jarak geometrik antar pixel. Range: [0, ∞)<br />
+                            <small
+                              >0 = pixel identik | Lebih tinggi = lebih
+                              berbeda</small
+                            >
+                          </p>
+                        </div>
+                        <div class="explanation-item">
+                          <strong>Manhattan Distance:</strong>
+                          <p>
+                            Jarak Manhattan (taxicab) antar pixel. Range: [0,
+                            ∞)<br />
+                            <small
+                              >0 = pixel identik | Lebih tinggi = lebih
+                              berbeda</small
+                            >
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

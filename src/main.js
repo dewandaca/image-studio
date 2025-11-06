@@ -2429,6 +2429,176 @@ class PixelReader {
     }
 
     document.getElementById("matchStatus").textContent = matchStatus;
+
+    // Update comparison table metrik matching
+    this.displayMatchingComparisonTable(
+      pearsonR,
+      pearsonG,
+      pearsonB,
+      pearsonGray,
+      chiR,
+      chiG,
+      chiB,
+      chiGray,
+      eucR,
+      eucG,
+      eucB,
+      eucGray,
+      manhR,
+      manhG,
+      manhB,
+      manhGray,
+      ssim
+    );
+  }
+
+  displayMatchingComparisonTable(
+    pearsonR,
+    pearsonG,
+    pearsonB,
+    pearsonGray,
+    chiR,
+    chiG,
+    chiB,
+    chiGray,
+    eucR,
+    eucG,
+    eucB,
+    eucGray,
+    manhR,
+    manhG,
+    manhB,
+    manhGray,
+    ssim
+  ) {
+    // Update Pearson Correlation row
+    document.getElementById("cmpPearsonR").textContent = pearsonR.toFixed(4);
+    document.getElementById("cmpPearsonG").textContent = pearsonG.toFixed(4);
+    document.getElementById("cmpPearsonB").textContent = pearsonB.toFixed(4);
+    document.getElementById("cmpPearsonGray").textContent =
+      pearsonGray.toFixed(4);
+
+    // Interpretasi Pearson - threshold minimal dari semua channel
+    const pearsonMin = Math.min(
+      parseFloat(pearsonR),
+      parseFloat(pearsonG),
+      parseFloat(pearsonB),
+      parseFloat(pearsonGray)
+    );
+    let pearsonInterpret = "Terbalik";
+    if (pearsonMin > 0.9) {
+      pearsonInterpret = "✅ Sangat Mirip";
+    } else if (pearsonMin > 0.7) {
+      pearsonInterpret = "🟡 Mirip";
+    } else if (pearsonMin > 0.5) {
+      pearsonInterpret = "🟠 Agak Mirip";
+    } else if (pearsonMin > 0) {
+      pearsonInterpret = "🟠 Lemah";
+    } else if (pearsonMin > -0.5) {
+      pearsonInterpret = "🟠 Sangat Lemah";
+    }
+    document.getElementById("cmpPearsonInterpret").textContent =
+      pearsonInterpret;
+
+    // Update Chi-Square Distance row
+    document.getElementById("cmpChiR").textContent = chiR;
+    document.getElementById("cmpChiG").textContent = chiG;
+    document.getElementById("cmpChiB").textContent = chiB;
+    document.getElementById("cmpChiGray").textContent = chiGray;
+
+    // Interpretasi Chi-Square - semakin kecil semakin mirip
+    const chiAvg =
+      (parseFloat(chiR) +
+        parseFloat(chiG) +
+        parseFloat(chiB) +
+        parseFloat(chiGray)) /
+      4;
+    let chiInterpret = "Sangat Berbeda";
+    if (chiAvg < 100) {
+      chiInterpret = "✅ Sangat Mirip";
+    } else if (chiAvg < 500) {
+      chiInterpret = "🟡 Mirip";
+    } else if (chiAvg < 1000) {
+      chiInterpret = "🟠 Agak Mirip";
+    } else if (chiAvg < 5000) {
+      chiInterpret = "🔴 Berbeda";
+    }
+    document.getElementById("cmpChiInterpret").textContent = chiInterpret;
+
+    // Update Euclidean Distance row
+    document.getElementById("cmpEucR").textContent = eucR;
+    document.getElementById("cmpEucG").textContent = eucG;
+    document.getElementById("cmpEucB").textContent = eucB;
+    document.getElementById("cmpEucGray").textContent = eucGray;
+
+    // Interpretasi Euclidean - semakin kecil semakin mirip
+    const eucAvg =
+      (parseFloat(eucR) +
+        parseFloat(eucG) +
+        parseFloat(eucB) +
+        parseFloat(eucGray)) /
+      4;
+    let eucInterpret = "Sangat Berbeda";
+    if (eucAvg < 1000) {
+      eucInterpret = "✅ Sangat Mirip";
+    } else if (eucAvg < 5000) {
+      eucInterpret = "🟡 Mirip";
+    } else if (eucAvg < 10000) {
+      eucInterpret = "🟠 Agak Mirip";
+    } else if (eucAvg < 50000) {
+      eucInterpret = "🔴 Berbeda";
+    }
+    document.getElementById("cmpEucInterpret").textContent = eucInterpret;
+
+    // Update Manhattan Distance row
+    document.getElementById("cmpManhR").textContent = manhR;
+    document.getElementById("cmpManhG").textContent = manhG;
+    document.getElementById("cmpManhB").textContent = manhB;
+    document.getElementById("cmpManhGray").textContent = manhGray;
+
+    // Interpretasi Manhattan - semakin kecil semakin mirip
+    const manhAvg =
+      (parseFloat(manhR) +
+        parseFloat(manhG) +
+        parseFloat(manhB) +
+        parseFloat(manhGray)) /
+      4;
+    let manhInterpret = "Sangat Berbeda";
+    if (manhAvg < 1000) {
+      manhInterpret = "✅ Sangat Mirip";
+    } else if (manhAvg < 5000) {
+      manhInterpret = "🟡 Mirip";
+    } else if (manhAvg < 10000) {
+      manhInterpret = "🟠 Agak Mirip";
+    } else if (manhAvg < 50000) {
+      manhInterpret = "🔴 Berbeda";
+    }
+    document.getElementById("cmpManhInterpret").textContent = manhInterpret;
+
+    // Update SSIM row
+    document.getElementById("cmpSSIM").textContent = ssim;
+
+    // Interpretasi SSIM
+    const ssimVal = parseFloat(ssim);
+    let ssimInterpret = "Sangat Berbeda";
+    if (ssimVal > 0.95) {
+      ssimInterpret = "✅ Identik";
+    } else if (ssimVal > 0.9) {
+      ssimInterpret = "✅ Sangat Mirip";
+    } else if (ssimVal > 0.8) {
+      ssimInterpret = "🟡 Mirip";
+    } else if (ssimVal > 0.6) {
+      ssimInterpret = "🟠 Agak Mirip";
+    } else if (ssimVal > 0.4) {
+      ssimInterpret = "🔴 Berbeda";
+    } else if (ssimVal > 0) {
+      ssimInterpret = "🔴 Sangat Berbeda";
+    } else if (ssimVal > -0.5) {
+      ssimInterpret = "🔴 Terbalik";
+    } else {
+      ssimInterpret = "🔴 Sangat Terbalik";
+    }
+    document.getElementById("cmpSSIMInterpret").textContent = ssimInterpret;
   }
 
   displayMatchingImages(imageData1, imageData2) {
