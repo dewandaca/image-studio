@@ -82,6 +82,13 @@
               >
                 📈 Statistics
               </button>
+              <button
+                class="tab-button"
+                data-tab="tree-detection"
+                title="Deteksi warna pohon/vegetasi menggunakan HSV"
+              >
+                🌳 Tree Detection
+              </button>
             </div>
           </div>
         </aside>
@@ -1221,7 +1228,179 @@
                 </div>
               </div>
             </div>
-          </div>
+
+            <!-- Tree/Color Detection Tab -->
+            <div id="tree-detection" class="tab-pane">
+              <h2>🌳 Deteksi Pohon / Vegetasi (Color Segmentation)</h2>
+              <p style="color: #94a3b8; font-size: 0.92em; margin-bottom: 20px">
+                Deteksi warna pohon/vegetasi menggunakan segmentasi HSV dan hitung total piksel yang terdeteksi
+              </p>
+
+              <div class="feature-controls">
+                <div class="control-group">
+                  <h3>🎨 Pengaturan Rentang Hue</h3>
+                  <p class="info-text">
+                    💡 Warna hijau (pohon) biasanya berada di rentang 40°-100° pada color wheel HSV
+                  </p>
+                  
+                  <div class="slider-group">
+                    <label for="hueMinSlider">Hue Min:</label>
+                    <input
+                      type="range"
+                      id="hueMinSlider"
+                      min="0"
+                      max="360"
+                      value="40"
+                    />
+                    <span
+                      id="hueMinValue"
+                      style="color: #60a5fa; font-weight: 600; font-size: 1.1em"
+                      >40°</span
+                    >
+                  </div>
+
+                  <div class="slider-group">
+                    <label for="hueMaxSlider">Hue Max:</label>
+                    <input
+                      type="range"
+                      id="hueMaxSlider"
+                      min="0"
+                      max="360"
+                      value="100"
+                    />
+                    <span
+                      id="hueMaxValue"
+                      style="color: #60a5fa; font-weight: 600; font-size: 1.1em"
+                      >100°</span
+                    >
+                  </div>
+                </div>
+
+                <div class="control-group">
+                  <h3>🔆 Pengaturan Saturation & Value</h3>
+                  <p class="info-text">
+                    💡 Minimum saturation & value untuk mendeteksi warna hijau yang cukup jenuh
+                  </p>
+
+                  <div class="slider-group">
+                    <label for="saturationMinSlider">Saturation Min:</label>
+                    <input
+                      type="range"
+                      id="saturationMinSlider"
+                      min="0"
+                      max="100"
+                      value="15"
+                    />
+                    <span
+                      id="saturationMinValue"
+                      style="color: #60a5fa; font-weight: 600; font-size: 1.1em"
+                      >15%</span
+                    >
+                  </div>
+
+                  <div class="slider-group">
+                    <label for="valueMinSlider">Value Min:</label>
+                    <input
+                      type="range"
+                      id="valueMinSlider"
+                      min="0"
+                      max="100"
+                      value="15"
+                    />
+                    <span
+                      id="valueMinValue"
+                      style="color: #60a5fa; font-weight: 600; font-size: 1.1em"
+                      >15%</span
+                    >
+                  </div>
+                </div>
+
+                <div class="control-group">
+                  <button class="action-button" id="detectTreeColor">
+                    🔍 Deteksi Pohon
+                  </button>
+                  <button class="action-button secondary" id="resetTreeDetection">
+                    🔄 Reset Deteksi
+                  </button>
+                </div>
+              </div>
+
+              <!-- Detection Results -->
+              <div class="detection-results">
+                <div class="result-card">
+                  <h3>📊 Hasil Deteksi</h3>
+                  <div id="hsvRangeInfo" class="info-box">
+                    <p style="color: #94a3b8">Klik "Deteksi Pohon" untuk memulai analisis</p>
+                  </div>
+                </div>
+
+                <div class="result-card">
+                  <h3>📈 Progress Deteksi</h3>
+                  <div class="progress-container">
+                    <div id="detectionProgress" class="progress-bar"></div>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-top: 12px; font-size: 0.9em;">
+                    <span>Total: <strong id="totalPixels">0</strong></span>
+                    <span>Pohon: <strong id="detectedPixels">0</strong></span>
+                    <span>Persen: <strong id="detectionPercentage">0%</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Visualization Canvases -->
+              <div class="canvas-container dual">
+                <div>
+                  <p>🎨 Hasil Deteksi (Highlight)</p>
+                  <canvas id="processCanvasTreeDetection"></canvas>
+                </div>
+                <div>
+                  <p>⚫⚪ Mask (Binary Detection)</p>
+                  <canvas id="treeDetectionMaskCanvas"></canvas>
+                </div>
+              </div>
+
+              <!-- Detected Pixels List -->
+              <div class="detected-pixels-section">
+                <h3>📍 Sampel Piksel Terdeteksi</h3>
+                <p class="info-text">
+                  💡 Menampilkan koordinat dan nilai RGB/HSV dari piksel yang terdeteksi sebagai warna pohon
+                </p>
+                <div id="detectedPixelsContainer" class="detected-pixels-container"></div>
+              </div>
+
+              <!-- HSV Color Wheel Reference -->
+              <div class="color-wheel-reference">
+                <h3>🎨 Referensi Color Wheel HSV</h3>
+                <div class="hsv-explanation">
+                  <p style="margin-bottom: 12px; color: #e2e8f0;">
+                    <strong>Hue (Warna) - 0° sampai 360°:</strong>
+                  </p>
+                  <ul style="color: #cbd5e1; font-size: 0.9em; line-height: 1.8;">
+                    <li>🔴 <strong>0°</strong>: Merah</li>
+                    <li>🟠 <strong>30°</strong>: Orange</li>
+                    <li>🟡 <strong>60°</strong>: Kuning</li>
+                    <li>🟢 <strong>120°</strong>: Hijau</li>
+                    <li>🔵 <strong>240°</strong>: Biru</li>
+                    <li>🟣 <strong>300°</strong>: Magenta</li>
+                  </ul>
+                  <p style="margin-top: 12px; color: #a78bfa;">
+                    📌 <strong>Untuk pohon/vegetasi: gunakan rentang 40°-100° (warna hijau)</strong>
+                  </p>
+                </div>
+              </div>
+
+              <!-- Tips & Tricks -->
+              <div class="tips-section">
+                <h3>💡 Tips Deteksi Optimal</h3>
+                <ul style="color: #cbd5e1; line-height: 1.9; font-size: 0.9em;">
+                  <li><strong>Gambar satelit:</strong> Biasanya hijau gelap, coba Hue 40-90°, Sat ≥ 20%, Val ≥ 30%</li>
+                  <li><strong>Foto natural:</strong> Hijau terang, coba Hue 35-110°, Sat ≥ 15%, Val ≥ 40%</li>
+                  <li><strong>Foto indoor:</strong> Hijau kusam, coba Hue 40-100°, Sat ≥ 10%, Val ≥ 20%</li>
+                  <li><strong>Terlalu banyak noise:</strong> Naikan minimum saturation & value</li>
+                  <li><strong>Melewatkan pohon:</strong> Perlebar rentang hue ke bawah (misal 35°) atau naik ke 105°</li>
+                </ul>
+              </div>
+            </div>
 
           <div id="hoverInfo" class="hover-info hidden">
             <div class="hover-content">

@@ -51,7 +51,7 @@ npm run build
 \# Preview production build  
 npm run preview
 
-## **✅ 7 Fitur Utama**
+## **✅ 8 Fitur Utama**
 
 | No  | Fitur                  | Deskripsi                                                                  |
 | :-- | :--------------------- | :------------------------------------------------------------------------- |
@@ -62,6 +62,9 @@ npm run preview
 | 5   | **Boolean**            | Operasi bitwise (AND, OR, XOR) antar dua citra                             |
 | 6   | **Geometry**           | Transformasi geometri (rotasi, flip)                                       |
 | 7   | **Statistics**         | Analisis statistik mendalam (7 metrik per channel & 5 metrik perbandingan) |
+| 8   | **🌳 Tree Detection**  | Deteksi warna pohon/vegetasi menggunakan HSV segmentasi (M6 Assignment)    |
+
+## **📋 Dokumentasi Fitur Lengkap**
 
 ## **📋 Dokumentasi Fitur Lengkap**
 
@@ -212,7 +215,116 @@ Interpretasi multi-metrik untuk akurasi lebih baik:
 - Hasil: SSIM **tinggi** (mirip struktur ✅), Pearson **rendah/negatif** (skala berbeda)
 - Interpretasi: "🟡 **Mirip (Beda Brightness)**" ← **CORRECT!** (bukan "berbeda")
 
-## **🏗️ Arsitektur Teknis**
+### **8️⃣ Fitur: 🌳 Tree Detection (Deteksi Pohon/Vegetasi)**
+
+**Deskripsi:** Mendeteksi warna pohon/vegetasi dalam citra menggunakan **HSV Color Segmentation** dan menghitung jumlah piksel yang terdeteksi. Fitur ini dirancang khusus untuk **Tugas M6 Pengolahan Citra Digital**.
+
+#### **A. Konsep HSV**
+
+HSV (Hue, Saturation, Value) adalah model warna yang memisahkan informasi warna dari kecerahan:
+
+- **Hue (Warna)**: 0°-360° pada color wheel, menunjukkan warna asli
+- **Saturation (Kejenuhan)**: 0%-100%, mengukur intensitas warna (0% = abu-abu, 100% = warna murni)
+- **Value (Kecerahan)**: 0%-100%, mengukur tingkat pencahayaan (0% = hitam, 100% = terang)
+
+**Mengapa HSV untuk Deteksi Pohon?**
+
+1. **Pemisahan Warna dari Kecerahan**: Perubahan lighting tidak mempengaruhi rentang Hue
+2. **Intuitif**: Mudah mendefinisikan rentang warna hijau dibanding RGB kompleks
+3. **Tahan terhadap variasi lighting**: Ideal untuk foto satelit Google Maps
+
+#### **B. Algoritma Deteksi**
+
+```
+Input: Gambar RGB original
+Loop setiap pixel:
+  1. Convert RGB(r, g, b) → HSV(h, s, v)
+  2. Check: if (h dalam [hueMin, hueMax])
+              AND (s ≥ saturationMin)
+              AND (v ≥ valueMin)
+              then pixelDetected++
+  3. Create mask (white = detected, black = not detected)
+Output:
+  - Total piksel terdeteksi
+  - Persentase deteksi
+  - Visual highlight & binary mask
+```
+
+#### **C. Parameter Segmentasi**
+
+| Parameter      | Default | Range  | Deskripsi                                   |
+| :------------- | :------ | :----- | :------------------------------------------ |
+| **Hue Min**    | 40°     | 0-360° | Batas bawah warna hijau pada color wheel    |
+| **Hue Max**    | 100°    | 0-360° | Batas atas warna hijau pada color wheel     |
+| **Saturation** | 15%     | 0-100% | Minimum kejenuhan (tangkap hijau tua/kusam) |
+| **Value Min**  | 15%     | 0-100% | Minimum kecerahan (tangkap area gelap)      |
+
+#### **D. Rekomendasi Parameter per Jenis Gambar**
+
+| Gambar Type       | Hue Min | Hue Max | Sat Min | Val Min | Catatan                                        |
+| :---------------- | :------ | :------ | :------ | :------ | :--------------------------------------------- |
+| **Satelit**       | 40°     | 100°    | 15%     | 15%     | ← **DEFAULT BARU** (optimal untuk Google Maps) |
+| **Natural Foto**  | 35°     | 110°    | 15%     | 40%     | Variasi hijau terang-gelap, lighting alami     |
+| **Hijau Tua**     | 40°     | 100°    | 10%     | 10%     | Untuk area dengan shadows & hijau gelap        |
+| **Indoor Plant**  | 40°     | 100°    | 10%     | 20%     | Hijau kusam, pencahayaan terbatas              |
+| **Dark Forest**   | 35°     | 95°     | 15%     | 15%     | Area gelap, jenuh, untuk hutan tebal           |
+| **Padang Rumput** | 45°     | 105°    | 15%     | 50%     | Hijau terang, area terbuka dengan cahaya       |
+
+#### **E. Output & Interpretasi**
+
+Hasil deteksi ditampilkan dalam tiga format:
+
+1. **Statistik Numerik**
+
+   - Total Piksel: Jumlah total pixel dalam gambar
+   - Piksel Pohon: **Jawaban Tugas M6** ✅ (jumlah pixel terdeteksi)
+   - Persentase: (Piksel Pohon / Total Piksel) × 100%
+
+2. **Progress Bar Visual**
+
+   - Animasi gradient bar menunjukkan persentase deteksi
+
+3. **Visualisasi Kanvas**
+
+   - **Highlight Mode** (kiri): Area pohon di-brighten untuk visual jelas
+   - **Binary Mask** (kanan): Putih = pohon, Hitam = bukan pohon
+
+4. **Sampel Piksel Terdeteksi**
+   - Koordinat (X, Y) dan nilai RGB/HSV dari 100 pixel pertama
+   - Untuk verifikasi akurasi deteksi
+
+#### **F. Tips Optimisasi**
+
+**Jika Hijau TIDAK Terdeteksi (Under-Detection)**
+
+Banyak area pohon terlewat, terutama hijau gelap:
+
+- ⚠️ **PERTAMA**: Turunkan **Value Min** ke 10-15% (deteksi area gelap/hijau gelap)
+- ↓ Turunkan **Saturation Min** ke 10-15% (deteksi hijau kusam)
+- → Perlebar **Hue range** menjadi 30°-110° (termasuk kuning & biru)
+
+**Jika Deteksi Terlalu Banyak (Over-Detection)**
+
+Pixel non-pohon ikut terdeteksi:
+
+- ↑ Naikkan **Saturation Min** ke 30-40% (filter ketat)
+- ↑ Naikkan **Value Min** ke 40-50% (filter pencahayaan)
+- ← Perkecil **Hue range** menjadi 50°-90° (fokus hijau murni)
+
+**Real-Time Adjustment**
+
+Tidak perlu klik tombol setiap kali! Setiap menggeser slider, hasil update otomatis untuk quick feedback.
+
+#### **G. Contoh Use Case: Google Maps Satellite**
+
+1. Ambil screenshot area hutan dari Google Maps
+2. Upload ke Tree Detection
+3. Default setting sudah optimal untuk hijau tua (Hue 40-100°, Sat 15%, Val 15%) ✅
+4. Klik "🔍 Deteksi Pohon"
+5. Baca hasil: **Piksel Pohon** = Jawaban Tugas M6
+6. Screenshot hasil untuk laporan
+
+---## **🏗️ Arsitektur Teknis**
 
 ### **Core Components**
 

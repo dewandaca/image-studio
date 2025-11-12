@@ -343,6 +343,170 @@ class ImageProcessor {
     return Math.max(0, Math.min(255, Math.round(value)));
   }
 
+  // === Color Detection Features ===
+
+  // Konversi RGB ke HSV
+  rgbToHsv(r, g, b) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    let h = 0;
+    let s = 0;
+    let v = max;
+
+    if (max !== 0) {
+      s = delta / max;
+    }
+
+    if (delta !== 0) {
+      if (max === r) {
+        h = ((g - b) / delta + (g < b ? 6 : 0)) / 6;
+      } else if (max === g) {
+        h = ((b - r) / delta + 2) / 6;
+      } else {
+        h = ((r - g) / delta + 4) / 6;
+      }
+    }
+
+    // Return H in 0-360, S in 0-100, V in 0-100
+    return {
+      h: Math.round(h * 360),
+      s: Math.round(s * 100),
+      v: Math.round(v * 100),
+    };
+  }
+
+  // Deteksi warna hijau (vegetasi/pohon) berdasarkan HSV
+  // Rentang warna hijau dalam HSV: Hue 60-180 derajat (dengan toleransi)
+  // ⚠️ Untuk hijau TUA/GELAP: turunkan valueMin ke 15-20
+  // ⚠️ Untuk hijau TERANG: naikkan valueMin ke 40-50
+  detectTreeColor(
+    imageData,
+    hueMin = 40,
+    hueMax = 100,
+    saturationMin = 15, // Turunkan dari 20 untuk tangkap hijau tua
+    valueMin = 15 // Turunkan dari 30 untuk tangkap hijau gelap
+  ) {
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+
+    // Buat image data untuk mask hasil deteksi
+    const maskData = new ImageData(width, height);
+    const maskPixels = maskData.data;
+
+    let detectedPixelCount = 0;
+    const detectedPixels = [];
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3];
+
+      const hsv = this.rgbToHsv(r, g, b);
+
+      // Check apakah pixel termasuk "warna pohon"
+      const isGreen =
+        hsv.h >= hueMin &&
+        hsv.h <= hueMax &&
+        hsv.s >= saturationMin &&
+        hsv.v >= valueMin;
+
+      if (isGreen) {
+        // Set pixel ke warna putih (detected) di mask
+        maskPixels[i] = 255; // R
+        maskPixels[i + 1] = 255; // G
+        maskPixels[i + 2] = 255; // B
+        maskPixels[i + 3] = 255; // A
+
+        detectedPixelCount++;
+
+        // Record koordinat pixel yang terdeteksi
+        const pixelIndex = i / 4;
+        const x = pixelIndex % width;
+        const y = Math.floor(pixelIndex / width);
+        detectedPixels.push({ x, y, r, g, b, h: hsv.h, s: hsv.s, v: hsv.v });
+      } else {
+        // Set pixel ke warna hitam (not detected) di mask
+        maskPixels[i] = 0; // R
+        maskPixels[i + 1] = 0; // G
+        maskPixels[i + 2] = 0; // B
+        maskPixels[i + 3] = 255; // A (opacity tetap)
+      }
+    }
+
+    return {
+      maskData: maskData,
+      detectedPixelCount: detectedPixelCount,
+      totalPixels: width * height,
+      percentage: ((detectedPixelCount / (width * height)) * 100).toFixed(2),
+      detectedPixels: detectedPixels,
+      imageWidth: width,
+      imageHeight: height,
+    };
+  }
+
+  // Deteksi dengan visualisasi highlight original color
+  detectTreeColorWithHighlight(
+    imageData,
+    hueMin = 40,
+    hueMax = 100,
+    saturationMin = 15, // Turunkan dari 20 untuk tangkap hijau tua
+    valueMin = 15 // Turunkan dari 30 untuk tangkap hijau gelap
+  ) {
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+
+    // Buat image data untuk highlight
+    const highlightData = new ImageData(width, height);
+    const highlightPixels = highlightData.data;
+
+    // Copy original image terlebih dahulu
+    for (let i = 0; i < data.length; i++) {
+      highlightPixels[i] = data[i];
+    }
+
+    let detectedPixelCount = 0;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      const hsv = this.rgbToHsv(r, g, b);
+
+      // Check apakah pixel termasuk "warna pohon"
+      const isGreen =
+        hsv.h >= hueMin &&
+        hsv.h <= hueMax &&
+        hsv.s >= saturationMin &&
+        hsv.v >= valueMin;
+
+      if (isGreen) {
+        // Buat warna lebih cerah/neon untuk highlight
+        highlightPixels[i] = Math.min(255, r + 50); // R
+        highlightPixels[i + 1] = 255; // G (boost max)
+        highlightPixels[i + 2] = Math.max(0, b - 50); // B (reduce blue)
+
+        detectedPixelCount++;
+      }
+    }
+
+    return {
+      highlightData: highlightData,
+      detectedPixelCount: detectedPixelCount,
+      totalPixels: width * height,
+      percentage: ((detectedPixelCount / (width * height)) * 100).toFixed(2),
+    };
+  }
+
   // Calculate histogram untuk satu channel
   calculateHistogram(imageData, channel = "gray") {
     const histogram = new Array(256).fill(0);
@@ -892,6 +1056,33 @@ class PixelReader {
     document
       .getElementById("analyzeMatching")
       .addEventListener("click", () => this.analyzeMatching());
+
+    // Tree/Color Detection controls
+    document
+      .getElementById("detectTreeColor")
+      .addEventListener("click", () => this.applyTreeDetection());
+    document.getElementById("hueMinSlider").addEventListener("input", (e) => {
+      document.getElementById("hueMinValue").textContent = e.target.value;
+      if (this.processor) this.applyTreeDetection();
+    });
+    document.getElementById("hueMaxSlider").addEventListener("input", (e) => {
+      document.getElementById("hueMaxValue").textContent = e.target.value;
+      if (this.processor) this.applyTreeDetection();
+    });
+    document
+      .getElementById("saturationMinSlider")
+      .addEventListener("input", (e) => {
+        document.getElementById("saturationMinValue").textContent =
+          e.target.value;
+        if (this.processor) this.applyTreeDetection();
+      });
+    document.getElementById("valueMinSlider").addEventListener("input", (e) => {
+      document.getElementById("valueMinValue").textContent = e.target.value;
+      if (this.processor) this.applyTreeDetection();
+    });
+    document
+      .getElementById("resetTreeDetection")
+      .addEventListener("click", () => this.resetTreeDetection());
   }
 
   setupPixelSearch(tabId, canvasId) {
@@ -2615,6 +2806,161 @@ class PixelReader {
     canvas2.height = imageData2.height;
     const ctx2 = canvas2.getContext("2d");
     ctx2.putImageData(imageData2, 0, 0);
+  }
+
+  // === Tree/Color Detection Features ===
+  applyTreeDetection() {
+    if (!this.processor) {
+      alert("Upload gambar terlebih dahulu!");
+      return;
+    }
+
+    // Get slider values
+    const hueMin = parseInt(document.getElementById("hueMinSlider").value);
+    const hueMax = parseInt(document.getElementById("hueMaxSlider").value);
+    const saturationMin = parseInt(
+      document.getElementById("saturationMinSlider").value
+    );
+    const valueMin = parseInt(document.getElementById("valueMinSlider").value);
+
+    // Get original image data
+    const imageData = this.processor.getImageData();
+
+    // Deteksi warna pohon dengan highlight
+    const result = this.processor.detectTreeColorWithHighlight(
+      imageData,
+      hueMin,
+      hueMax,
+      saturationMin,
+      valueMin
+    );
+
+    // Draw hasil ke canvas utama
+    const canvas = document.getElementById("processCanvasTreeDetection");
+    this.processor.drawToCanvas(result.highlightData, canvas);
+
+    // Deteksi mask untuk menampilkan hasil binary
+    const maskResult = this.processor.detectTreeColor(
+      imageData,
+      hueMin,
+      hueMax,
+      saturationMin,
+      valueMin
+    );
+
+    // Draw mask ke canvas mask
+    const maskCanvas = document.getElementById("treeDetectionMaskCanvas");
+    this.processor.drawToCanvas(maskResult.maskData, maskCanvas);
+
+    // Update statistics
+    this.updateTreeDetectionStats(maskResult);
+
+    // Display sample detected pixels
+    this.displayDetectedTreePixels(maskResult);
+
+    console.log(
+      `🌳 Deteksi pohon: ${maskResult.detectedPixelCount} piksel (${maskResult.percentage}%)`
+    );
+  }
+
+  updateTreeDetectionStats(result) {
+    document.getElementById("totalPixels").textContent =
+      result.totalPixels.toLocaleString("id-ID");
+    document.getElementById("detectedPixels").textContent =
+      result.detectedPixelCount.toLocaleString("id-ID");
+    document.getElementById("detectionPercentage").textContent =
+      result.percentage + "%";
+
+    // Update progress bar
+    const progressBar = document.getElementById("detectionProgress");
+    progressBar.style.width = result.percentage + "%";
+
+    // Display HSV range info
+    const hueMin = document.getElementById("hueMinValue").textContent;
+    const hueMax = document.getElementById("hueMaxValue").textContent;
+    const satMin = document.getElementById("saturationMinValue").textContent;
+    const valMin = document.getElementById("valueMinValue").textContent;
+
+    document.getElementById("hsvRangeInfo").innerHTML = `
+      <strong>Rentang HSV yang dideteksi:</strong><br>
+      🎨 Hue: ${hueMin}° - ${hueMax}°<br>
+      🔆 Saturation: ≥ ${satMin}%<br>
+      ⚡ Value: ≥ ${valMin}%<br>
+      <br>
+      <strong>📊 Hasil Deteksi:</strong><br>
+      Total Piksel: <span style="color: #60a5fa; font-weight: bold;">${result.totalPixels.toLocaleString(
+        "id-ID"
+      )}</span><br>
+      Piksel Pohon: <span style="color: #22c55e; font-weight: bold;">${result.detectedPixelCount.toLocaleString(
+        "id-ID"
+      )}</span><br>
+      Persentase: <span style="color: #fbbf24; font-weight: bold;">${
+        result.percentage
+      }%</span>
+    `;
+  }
+
+  displayDetectedTreePixels(result) {
+    const container = document.getElementById("detectedPixelsContainer");
+
+    // Hanya tampilkan sampel 100 pixel pertama untuk performa
+    const sampleSize = Math.min(100, result.detectedPixels.length);
+    const samples = result.detectedPixels.slice(0, sampleSize);
+
+    let html = `<p style="color: #718096; font-size: 0.9em; margin-bottom: 10px;">Menampilkan ${sampleSize} piksel terdeteksi pertama (Total: ${result.detectedPixelCount.toLocaleString(
+      "id-ID"
+    )})</p>`;
+    html += '<div class="detected-pixels-list">';
+
+    samples.forEach((pixel, idx) => {
+      html += `
+        <div class="pixel-item">
+          <span class="pixel-coord">Pixel ${idx + 1}</span>
+          <span class="pixel-pos">Pos: (${pixel.x}, ${pixel.y})</span>
+          <span class="pixel-rgb">RGB(${pixel.r}, ${pixel.g}, ${pixel.b})</span>
+          <span class="pixel-hsv" title="Hue, Saturation, Value">HSV(${
+            pixel.h
+          }°, ${pixel.s}%, ${pixel.v}%)</span>
+        </div>
+      `;
+    });
+
+    html += "</div>";
+    container.innerHTML = html;
+  }
+
+  resetTreeDetection() {
+    if (!this.currentImage) return;
+
+    // Reset sliders ke nilai default
+    document.getElementById("hueMinSlider").value = 40;
+    document.getElementById("hueMinValue").textContent = "40";
+
+    document.getElementById("hueMaxSlider").value = 100;
+    document.getElementById("hueMaxValue").textContent = "100";
+
+    document.getElementById("saturationMinSlider").value = 20;
+    document.getElementById("saturationMinValue").textContent = "20";
+
+    document.getElementById("valueMinSlider").value = 30;
+    document.getElementById("valueMinValue").textContent = "30";
+
+    // Clear results
+    document.getElementById("detectedPixelsContainer").innerHTML = "";
+    document.getElementById("hsvRangeInfo").innerHTML = "";
+
+    // Clear canvases
+    const canvas = document.getElementById("processCanvasTreeDetection");
+    canvas.width = this.currentImage.width;
+    canvas.height = this.currentImage.height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(this.currentImage, 0, 0);
+
+    const maskCanvas = document.getElementById("treeDetectionMaskCanvas");
+    maskCanvas.width = 0;
+    maskCanvas.height = 0;
+
+    console.log("🔄 Tree detection reset");
   }
 }
 
