@@ -343,6 +343,196 @@ class ImageProcessor {
     return Math.max(0, Math.min(255, Math.round(value)));
   }
 
+  // === Edge Detection Features ===
+
+  // Sobel Edge Detection
+  sobelEdgeDetection() {
+    const imageData = this.getImageData();
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+
+    // Konversi ke grayscale terlebih dahulu
+    const gray = new Uint8ClampedArray(width * height);
+    for (let i = 0; i < data.length; i += 4) {
+      const grayVal = Math.round(
+        0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+      );
+      gray[Math.floor(i / 4)] = grayVal;
+    }
+
+    // Sobel kernels
+    const sobelX = [
+      [-1, 0, 1],
+      [-2, 0, 2],
+      [-1, 0, 1],
+    ];
+    const sobelY = [
+      [-1, -2, -1],
+      [0, 0, 0],
+      [1, 2, 1],
+    ];
+
+    // Hasil konvolusi untuk X dan Y
+    const gx = new Float32Array(width * height);
+    const gy = new Float32Array(width * height);
+    const gradient = new Uint8ClampedArray(width * height);
+
+    // Apply convolution untuk X dan Y
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        let sumX = 0;
+        let sumY = 0;
+
+        // Apply Sobel kernels
+        for (let ky = -1; ky <= 1; ky++) {
+          for (let kx = -1; kx <= 1; kx++) {
+            const pixelIdx = (y + ky) * width + (x + kx);
+            const pixelVal = gray[pixelIdx];
+            sumX += pixelVal * sobelX[ky + 1][kx + 1];
+            sumY += pixelVal * sobelY[ky + 1][kx + 1];
+          }
+        }
+
+        const idx = y * width + x;
+        gx[idx] = sumX;
+        gy[idx] = sumY;
+
+        // Calculate magnitude
+        const magnitude = Math.sqrt(sumX * sumX + sumY * sumY);
+        gradient[idx] = Math.min(255, Math.floor(magnitude / 4)); // Normalize
+      }
+    }
+
+    // Convert to ImageData
+    const resultData = new ImageData(width, height);
+    for (let i = 0; i < width * height; i++) {
+      const val = gradient[i];
+      const idx = i * 4;
+      resultData.data[idx] = val; // R
+      resultData.data[idx + 1] = val; // G
+      resultData.data[idx + 2] = val; // B
+      resultData.data[idx + 3] = 255; // A
+    }
+
+    return {
+      imageData: resultData,
+      gx: gx,
+      gy: gy,
+      gradient: gradient,
+      width: width,
+      height: height,
+    };
+  }
+
+  // Prewitt Edge Detection
+  prewittEdgeDetection() {
+    const imageData = this.getImageData();
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+
+    // Konversi ke grayscale
+    const gray = new Uint8ClampedArray(width * height);
+    for (let i = 0; i < data.length; i += 4) {
+      const grayVal = Math.round(
+        0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+      );
+      gray[Math.floor(i / 4)] = grayVal;
+    }
+
+    // Prewitt kernels
+    const prewittX = [
+      [-1, 0, 1],
+      [-1, 0, 1],
+      [-1, 0, 1],
+    ];
+    const prewittY = [
+      [-1, -1, -1],
+      [0, 0, 0],
+      [1, 1, 1],
+    ];
+
+    // Hasil konvolusi
+    const gx = new Float32Array(width * height);
+    const gy = new Float32Array(width * height);
+    const gradient = new Uint8ClampedArray(width * height);
+
+    // Apply convolution
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        let sumX = 0;
+        let sumY = 0;
+
+        for (let ky = -1; ky <= 1; ky++) {
+          for (let kx = -1; kx <= 1; kx++) {
+            const pixelIdx = (y + ky) * width + (x + kx);
+            const pixelVal = gray[pixelIdx];
+            sumX += pixelVal * prewittX[ky + 1][kx + 1];
+            sumY += pixelVal * prewittY[ky + 1][kx + 1];
+          }
+        }
+
+        const idx = y * width + x;
+        gx[idx] = sumX;
+        gy[idx] = sumY;
+
+        // Calculate magnitude
+        const magnitude = Math.sqrt(sumX * sumX + sumY * sumY);
+        gradient[idx] = Math.min(255, Math.floor(magnitude / 4)); // Normalize
+      }
+    }
+
+    // Convert to ImageData
+    const resultData = new ImageData(width, height);
+    for (let i = 0; i < width * height; i++) {
+      const val = gradient[i];
+      const idx = i * 4;
+      resultData.data[idx] = val;
+      resultData.data[idx + 1] = val;
+      resultData.data[idx + 2] = val;
+      resultData.data[idx + 3] = 255;
+    }
+
+    return {
+      imageData: resultData,
+      gx: gx,
+      gy: gy,
+      gradient: gradient,
+      width: width,
+      height: height,
+    };
+  }
+
+  // Helper method untuk menampilkan kernel
+  getKernel(type) {
+    if (type === "sobelX") {
+      return [
+        [-1, 0, 1],
+        [-2, 0, 2],
+        [-1, 0, 1],
+      ];
+    } else if (type === "sobelY") {
+      return [
+        [-1, -2, -1],
+        [0, 0, 0],
+        [1, 2, 1],
+      ];
+    } else if (type === "prewittX") {
+      return [
+        [-1, 0, 1],
+        [-1, 0, 1],
+        [-1, 0, 1],
+      ];
+    } else if (type === "prewittY") {
+      return [
+        [-1, -1, -1],
+        [0, 0, 0],
+        [1, 1, 1],
+      ];
+    }
+  }
+
   // === Color Detection Features ===
 
   // Konversi RGB ke HSV
@@ -1083,6 +1273,14 @@ class PixelReader {
     document
       .getElementById("resetTreeDetection")
       .addEventListener("click", () => this.resetTreeDetection());
+
+    // Edge Detection controls
+    document
+      .getElementById("applyEdgeDetection")
+      .addEventListener("click", () => this.applyEdgeDetection());
+    document
+      .getElementById("resetEdgeDetection")
+      .addEventListener("click", () => this.resetEdgeDetection());
   }
 
   setupPixelSearch(tabId, canvasId) {
@@ -2961,6 +3159,439 @@ class PixelReader {
     maskCanvas.height = 0;
 
     console.log("🔄 Tree detection reset");
+  }
+
+  // === Edge Detection Features ===
+  applyEdgeDetection() {
+    if (!this.processor) {
+      alert("Upload gambar terlebih dahulu!");
+      return;
+    }
+
+    try {
+      const kernel = document.getElementById("edgeKernel").value;
+      let result;
+
+      if (kernel === "sobel") {
+        result = this.processor.sobelEdgeDetection();
+      } else if (kernel === "prewitt") {
+        result = this.processor.prewittEdgeDetection();
+      }
+
+      if (!result) {
+        console.error("❌ Hasil edge detection tidak ditemukan!");
+        return;
+      }
+
+      // Draw hasil edge detection magnitude
+      const canvas = document.getElementById("processCanvasEdgeDetection");
+      if (!canvas) {
+        console.error("❌ Canvas processCanvasEdgeDetection tidak ditemukan!");
+        return;
+      }
+      this.processor.drawToCanvas(result.imageData, canvas);
+
+      // Tampilkan kernel yang digunakan
+      this.displayEdgeDetectionKernel(kernel);
+
+      // Tampilkan sample matriks konvolusi
+      this.displayConvolutionMatrices(result, kernel);
+
+      // Tampilkan visualisasi Gx, Gy, dan Magnitude
+      this.displayEdgeComponents(result);
+
+      // Tampilkan statistik gradient
+      this.displayGradientDisplay(result, canvas);
+
+      console.log(
+        `✅ Edge detection dengan kernel ${kernel} berhasil diterapkan!`
+      );
+    } catch (error) {
+      console.error("❌ Error dalam applyEdgeDetection:", error);
+      alert("Error: " + error.message);
+    }
+  }
+
+  displayEdgeComponents(result) {
+    try {
+      const containerDiv = document.getElementById("edgeComponentsDisplay");
+      if (!containerDiv) {
+        console.error("❌ Container edgeComponentsDisplay tidak ditemukan!");
+        return;
+      }
+
+      const width = result.width;
+      const height = result.height;
+
+      // Create canvases untuk Gx, Gy, dan Magnitude
+      let html = `<h4>🎨 Visualisasi Komponen Edge Detection</h4>`;
+      html += `<div class="edge-components-container">`;
+      html += `<div class="edge-component"><strong>Gx (Horizontal Gradient)</strong><canvas id="canvasGx" width="${width}" height="${height}" style="border: 1px solid #cbd5e0; max-width: 300px;"></canvas></div>`;
+      html += `<div class="edge-component"><strong>Gy (Vertical Gradient)</strong><canvas id="canvasGy" width="${width}" height="${height}" style="border: 1px solid #cbd5e0; max-width: 300px;"></canvas></div>`;
+      html += `<div class="edge-component"><strong>Magnitude</strong><canvas id="canvasMagnitude" width="${width}" height="${height}" style="border: 1px solid #cbd5e0; max-width: 300px;"></canvas></div>`;
+      html += `</div>`;
+
+      containerDiv.innerHTML = html;
+
+      // Draw Gx (Horizontal)
+      setTimeout(() => {
+        this.drawGradientComponent(result.gx, width, height, "canvasGx");
+        this.drawGradientComponent(result.gy, width, height, "canvasGy");
+        this.drawMagnitudeComponent(
+          result.gradient,
+          width,
+          height,
+          "canvasMagnitude"
+        );
+        console.log("✅ Edge components berhasil di-render");
+      }, 100);
+    } catch (error) {
+      console.error("❌ Error dalam displayEdgeComponents:", error);
+    }
+  }
+
+  drawGradientComponent(gradientData, width, height, canvasId) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext("2d");
+    const imageData = ctx.createImageData(width, height);
+    const data = imageData.data;
+
+    // Cari min dan max untuk normalization
+    let minVal = Infinity,
+      maxVal = -Infinity;
+    for (let i = 0; i < gradientData.length; i++) {
+      const absVal = Math.abs(gradientData[i]);
+      minVal = Math.min(minVal, absVal);
+      maxVal = Math.max(maxVal, absVal);
+    }
+
+    const range = maxVal - minVal || 1;
+
+    // Convert ke grayscale (hitam-putih)
+    for (let i = 0; i < gradientData.length; i++) {
+      // Ambil nilai absolut dan normalize ke 0-255
+      const absVal = Math.abs(gradientData[i]);
+      const normalized = ((absVal - minVal) / range) * 255;
+      const grayValue = Math.floor(normalized);
+
+      const idx = i * 4;
+      // Grayscale - sama untuk R, G, B
+      data[idx] = grayValue; // R
+      data[idx + 1] = grayValue; // G
+      data[idx + 2] = grayValue; // B
+      data[idx + 3] = 255; // A
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+  }
+
+  drawMagnitudeComponent(gradientData, width, height, canvasId) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext("2d");
+    const imageData = ctx.createImageData(width, height);
+    const data = imageData.data;
+
+    for (let i = 0; i < gradientData.length; i++) {
+      const val = gradientData[i];
+      const idx = i * 4;
+
+      data[idx] = val; // R
+      data[idx + 1] = val; // G
+      data[idx + 2] = val; // B
+      data[idx + 3] = 255; // A
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+  }
+
+  displayEdgeDetectionKernel(kernel) {
+    const kernelDiv = document.getElementById("edgeKernelDisplay");
+    let kernelX, kernelY, title;
+
+    if (kernel === "sobel") {
+      kernelX = [
+        [-1, 0, 1],
+        [-2, 0, 2],
+        [-1, 0, 1],
+      ];
+      kernelY = [
+        [-1, -2, -1],
+        [0, 0, 0],
+        [1, 2, 1],
+      ];
+      title = "Sobel Kernel";
+    } else if (kernel === "prewitt") {
+      kernelX = [
+        [-1, 0, 1],
+        [-1, 0, 1],
+        [-1, 0, 1],
+      ];
+      kernelY = [
+        [-1, -1, -1],
+        [0, 0, 0],
+        [1, 1, 1],
+      ];
+      title = "Prewitt Kernel";
+    }
+
+    let html = `<h4>${title}</h4>`;
+    html += `<div class="kernel-display">`;
+    html += `<div class="kernel-part"><strong>Kernel X (Horizontal):</strong><br>`;
+    html += this.matrixToHtml(kernelX);
+    html += `</div>`;
+    html += `<div class="kernel-part"><strong>Kernel Y (Vertical):</strong><br>`;
+    html += this.matrixToHtml(kernelY);
+    html += `</div>`;
+    html += `</div>`;
+
+    kernelDiv.innerHTML = html;
+  }
+
+  displayConvolutionMatrices(result, kernel) {
+    try {
+      const matrixDiv = document.getElementById("convolutionMatrixDisplay");
+      if (!matrixDiv) {
+        console.error("❌ Container convolutionMatrixDisplay tidak ditemukan!");
+        return;
+      }
+
+      const width = result.width;
+      const height = result.height;
+
+      // ===== SECTION 1: 5x5 PIXEL PERTAMA =====
+      const sampleSize = 5;
+      const startX = 0;
+      const startY = 0;
+
+      const gxSample = [];
+      const gySample = [];
+      const magnitudeSample = [];
+
+      for (let y = 0; y < sampleSize; y++) {
+        const gxRow = [];
+        const gyRow = [];
+        const magRow = [];
+
+        for (let x = 0; x < sampleSize; x++) {
+          const idx = (startY + y) * width + (startX + x);
+          const gxVal = parseFloat(result.gx[idx]).toFixed(1);
+          const gyVal = parseFloat(result.gy[idx]).toFixed(1);
+
+          gxRow.push(parseFloat(gxVal));
+          gyRow.push(parseFloat(gyVal));
+
+          const mag = Math.sqrt(
+            parseFloat(gxVal) * parseFloat(gxVal) +
+              parseFloat(gyVal) * parseFloat(gyVal)
+          );
+          magRow.push(parseFloat(mag.toFixed(2)));
+        }
+
+        gxSample.push(gxRow);
+        gySample.push(gyRow);
+        magnitudeSample.push(magRow);
+      }
+
+      // ===== SECTION 2: FULL MATRIX =====
+      const gxFull = [];
+      const gyFull = [];
+      const magnitudeFull = [];
+
+      for (let y = 0; y < height; y++) {
+        const gxRow = [];
+        const gyRow = [];
+        const magRow = [];
+
+        for (let x = 0; x < width; x++) {
+          const idx = y * width + x;
+          const gxVal = parseFloat(result.gx[idx]).toFixed(1);
+          const gyVal = parseFloat(result.gy[idx]).toFixed(1);
+
+          gxRow.push(parseFloat(gxVal));
+          gyRow.push(parseFloat(gyVal));
+
+          const mag = Math.sqrt(
+            parseFloat(gxVal) * parseFloat(gxVal) +
+              parseFloat(gyVal) * parseFloat(gyVal)
+          );
+          magRow.push(parseFloat(mag.toFixed(2)));
+        }
+
+        gxFull.push(gxRow);
+        gyFull.push(gyRow);
+        magnitudeFull.push(magRow);
+      }
+
+      // ===== RENDER HTML =====
+      let html = `<h4>📊 Matriks Konvolusi 5x5 Pixel Pertama</h4>`;
+      html += `<div class="convolution-matrices">`;
+      html += `<div class="matrix-part"><strong>🔹 Gx (Horizontal Gradient):</strong><br>`;
+      html += this.matrixToHtml(gxSample, false);
+      html += `</div>`;
+      html += `<div class="matrix-part"><strong>🔹 Gy (Vertical Gradient):</strong><br>`;
+      html += this.matrixToHtml(gySample, false);
+      html += `</div>`;
+      html += `<div class="matrix-part"><strong>🔹 Magnitude: √(Gx² + Gy²)</strong><br>`;
+      html += this.matrixToHtml(magnitudeSample, true);
+      html += `</div>`;
+      html += `</div>`;
+
+      // Full Matrix Section dengan Table Display (seperti pixel table)
+      html += `<hr style="border: 1px solid #334155; margin: 30px 0;">`;
+      html += `<h4>📊 Matriks Konvolusi Lengkap - Table View (${width}x${height})</h4>`;
+      html += `<p style="color: #94a3b8; font-size: 0.9em; margin: 10px 0;">Nilai ditampilkan dalam format tabel dengan gradient warna</p>`;
+      
+      html += `<div style="margin-bottom: 30px;">`;
+      html += `<h5 style="color: #cbd5e1;">Gx (Horizontal Gradient)</h5>`;
+      html += this.matrixToColorTable(gxFull, false, "Gx");
+      html += `</div>`;
+
+      html += `<div style="margin-bottom: 30px;">`;
+      html += `<h5 style="color: #cbd5e1;">Gy (Vertical Gradient)</h5>`;
+      html += this.matrixToColorTable(gyFull, false, "Gy");
+      html += `</div>`;
+
+      html += `<div>`;
+      html += `<h5 style="color: #cbd5e1;">Magnitude (√Gx² + Gy²)</h5>`;
+      html += this.matrixToColorTable(magnitudeFull, true, "Magnitude");
+      html += `</div>`;
+
+      matrixDiv.innerHTML = html;
+      console.log("✅ Convolution matrices (sample + full) berhasil di-render");
+    } catch (error) {
+      console.error("❌ Error dalam displayConvolutionMatrices:", error);
+      console.error("Error details:", error.stack);
+    }
+  }
+
+  matrixToColorTable(matrix, isFloat = false, matrixType = "Matrix") {
+    const height = matrix.length;
+    const width = height > 0 ? matrix[0].length : 0;
+    
+    // Find min/max untuk color scaling
+    let minVal = Infinity, maxVal = -Infinity;
+    for (let row of matrix) {
+      for (let val of row) {
+        minVal = Math.min(minVal, val);
+        maxVal = Math.max(maxVal, val);
+      }
+    }
+
+    let html = '<div class="table-wrapper"><table class="pixel-table" style="margin-top: 10px;">';
+    html += "<thead><tr><th></th>";
+    for (let x = 0; x < width; x++) {
+      html += `<th>${x}</th>`;
+    }
+    html += "</tr></thead>";
+    html += "<tbody>";
+
+    for (let y = 0; y < height; y++) {
+      html += `<tr><th>${y}</th>`;
+      for (let x = 0; x < width; x++) {
+        const val = matrix[y][x];
+        
+        // Normalize value to 0-255 for color gradient
+        const normalized = ((val - minVal) / (maxVal - minVal + 0.001)) * 255;
+        
+        // Create grayscale color based on value
+        const grayValue = Math.round(normalized);
+        const bgColor = `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
+        
+        // Determine text color based on brightness
+        const brightness = 0.299 * grayValue + 0.587 * grayValue + 0.114 * grayValue;
+        const isLight = brightness > 180;
+        const lightClass = isLight ? " light-bg" : "";
+        
+        const displayVal = val.toFixed(isFloat ? 2 : 1);
+        html += `<td class="${lightClass}" style="background-color: ${bgColor}; font-size: 6px; padding: 2px;" title="${matrixType}(${x},${y}) = ${displayVal}">${displayVal}</td>`;
+      }
+      html += "</tr>";
+    }
+    html += "</tbody></table></div>";
+    return html;
+  }
+
+  matrixToHtml(matrix, isFloat = false) {
+    let html =
+      '<div style="background: #0f172a; padding: 12px; border-radius: 6px; margin: 10px 0; font-family: monospace; color: #e2e8f0; overflow-x: auto;">';
+    html += '<pre style="margin: 0;">';
+
+    for (let row of matrix) {
+      html += "[";
+      for (let i = 0; i < row.length; i++) {
+        const val = row[i];
+        let strVal;
+        if (typeof val === "number") {
+          strVal = val.toFixed(isFloat ? 2 : 0).padStart(6, " ");
+        } else {
+          strVal = String(val).padStart(6, " ");
+        }
+        html += strVal;
+        if (i < row.length - 1) html += ",";
+      }
+      html += " ]<br>";
+    }
+
+    html += "</pre></div>";
+    return html;
+  }
+
+  displayGradientDisplay(result, canvas) {
+    try {
+      const infoDiv = document.getElementById("edgeDetectionInfo");
+      if (!infoDiv) {
+        console.error("❌ Container edgeDetectionInfo tidak ditemukan!");
+        return;
+      }
+
+      // Hitung statistik gradient dengan proper handling
+      let minGradient = 255;
+      let maxGradient = 0;
+      let sumGradient = 0;
+      let countPixels = 0;
+
+      // Iterasi melalui gradient array dengan proper conversion
+      for (let i = 0; i < result.gradient.length; i++) {
+        const val = result.gradient[i];
+        minGradient = Math.min(minGradient, val);
+        maxGradient = Math.max(maxGradient, val);
+        sumGradient += val;
+        countPixels++;
+      }
+
+      const avgGradient = (sumGradient / countPixels).toFixed(2);
+
+      let html = `<h4>📊 Statistik Deteksi Tepi</h4>`;
+      html += `<div class="stats-grid">`;
+      html += `<div class="stat-item"><strong>Nilai Gradient Min:</strong> ${minGradient}</div>`;
+      html += `<div class="stat-item"><strong>Nilai Gradient Max:</strong> ${maxGradient}</div>`;
+      html += `<div class="stat-item"><strong>Rata-rata Gradient:</strong> ${avgGradient}</div>`;
+      html += `<div class="stat-item"><strong>Ukuran Gambar:</strong> ${result.width}x${result.height}</div>`;
+      html += `</div>`;
+
+      infoDiv.innerHTML = html;
+      console.log("✅ Gradient display berhasil di-render");
+    } catch (error) {
+      console.error("❌ Error dalam displayGradientDisplay:", error);
+    }
+  }
+
+  resetEdgeDetection() {
+    if (!this.currentImage) return;
+
+    // Reset canvas
+    const canvas = document.getElementById("processCanvasEdgeDetection");
+    canvas.width = this.currentImage.width;
+    canvas.height = this.currentImage.height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(this.currentImage, 0, 0);
+
+    // Clear displays
+    document.getElementById("edgeKernelDisplay").innerHTML = "";
+    document.getElementById("convolutionMatrixDisplay").innerHTML = "";
+    document.getElementById("edgeDetectionInfo").innerHTML = "";
+
+    console.log("🔄 Edge detection reset");
   }
 }
 

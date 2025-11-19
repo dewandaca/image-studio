@@ -89,6 +89,13 @@
               >
                 🌳 Tree Detection
               </button>
+              <button
+                class="tab-button"
+                data-tab="edge-detection"
+                title="Deteksi tepi gambar menggunakan Sobel/Prewitt"
+              >
+                🔍 Edge Detection
+              </button>
             </div>
           </div>
         </aside>
@@ -1399,6 +1406,96 @@
                   <li><strong>Terlalu banyak noise:</strong> Naikan minimum saturation & value</li>
                   <li><strong>Melewatkan pohon:</strong> Perlebar rentang hue ke bawah (misal 35°) atau naik ke 105°</li>
                 </ul>
+              </div>
+            </div>
+
+            <!-- Edge Detection Tab -->
+            <div id="edge-detection" class="tab-pane">
+              <h2>🔍 Deteksi Tepi (Edge Detection)</h2>
+              <p style="color: #94a3b8; font-size: 0.92em; margin-bottom: 20px">
+                Deteksi tepi gambar menggunakan kernel Sobel atau Prewitt, tampilkan matriks kernel dan hasil konvolusi X/Y
+              </p>
+
+              <div class="feature-controls">
+                <div class="control-group">
+                  <label>Pilih Kernel:</label>
+                  <select id="edgeKernel">
+                    <option value="sobel">🔶 Sobel (Lebih sensitif terhadap noise)</option>
+                    <option value="prewitt">📐 Prewitt (Lebih halus)</option>
+                  </select>
+                  <p class="help-text">
+                    💡 Sobel: Lebih fokus pada perubahan intensity. Prewitt: Lebih halus dan berkurang noise
+                  </p>
+                </div>
+                <div class="control-group">
+                  <button class="action-button" id="applyEdgeDetection">
+                    ✨ Apply Edge Detection
+                  </button>
+                  <button class="action-button secondary" id="resetEdgeDetection">
+                    🔄 Reset ke Original
+                  </button>
+                </div>
+              </div>
+
+              <div class="canvas-container">
+                <p>📸 Hasil Edge Detection</p>
+                <canvas id="processCanvasEdgeDetection"></canvas>
+              </div>
+
+              <!-- Kernel Display Section -->
+              <div class="kernel-section">
+                <h3>📐 Kernel yang Digunakan</h3>
+                <div id="edgeKernelDisplay" class="kernel-container"></div>
+              </div>
+
+              <!-- Edge Components Display Section -->
+              <div class="edge-components-section">
+                <div id="edgeComponentsDisplay" class="edge-components-container"></div>
+              </div>
+
+              <!-- Convolution Matrix Display Section -->
+              <div class="convolution-section">
+                <h3>📊 Matriks Hasil Konvolusi</h3>
+                <p class="info-text">
+                  💡 Menampilkan contoh hasil konvolusi dari area 5x5 di tengah gambar untuk kernel X (horizontal gradient) dan Y (vertical gradient)
+                </p>
+                <div id="convolutionMatrixDisplay" class="matrix-container"></div>
+              </div>
+
+              <!-- Statistics Display Section -->
+              <div class="stats-section">
+                <div id="edgeDetectionInfo" class="stats-content"></div>
+              </div>
+
+              <!-- Information Section -->
+              <div class="info-section">
+                <h3>📖 Penjelasan Edge Detection</h3>
+                <div class="info-grid">
+                  <div class="info-box">
+                    <strong>🔶 Sobel:</strong>
+                    <p>Kernel 3x3 yang menggunakan bobot untuk mendeteksi tepi. Lebih sensitif terhadap perubahan gradien tetapi lebih rentan terhadap noise.</p>
+                  </div>
+                  <div class="info-box">
+                    <strong>📐 Prewitt:</strong>
+                    <p>Kernel 3x3 dengan bobot yang lebih seragam. Menghasilkan tepi yang lebih halus dan lebih tahan terhadap noise dibandingkan Sobel.</p>
+                  </div>
+                  <div class="info-box">
+                    <strong>📏 Gx (Horizontal):</strong>
+                    <p>Gradient arah X mendeteksi perubahan vertikal (tepi vertikal). Kernel mendeteksi perbedaan kolom kiri dan kanan.</p>
+                  </div>
+                  <div class="info-box">
+                    <strong>📊 Gy (Vertical):</strong>
+                    <p>Gradient arah Y mendeteksi perubahan horizontal (tepi horizontal). Kernel mendeteksi perbedaan baris atas dan bawah.</p>
+                  </div>
+                  <div class="info-box">
+                    <strong>🎯 Magnitude:</strong>
+                    <p>Dihitung sebagai √(Gx² + Gy²) yang merepresentasikan kekuatan tepi pada setiap pixel tanpa mempertimbangkan arah.</p>
+                  </div>
+                  <div class="info-box">
+                    <strong>🧭 Direction:</strong>
+                    <p>Dihitung sebagai arctan(Gy/Gx) untuk menentukan arah tepi pada setiap pixel (0° - 180°).</p>
+                  </div>
+                </div>
               </div>
             </div>
 
